@@ -1,0 +1,37 @@
+
+
+header{
+    background-color: aqua ;
+}
+
+main{
+    display:flex;
+    justify-content:space-between;
+    width:80%;
+    margin: auto;
+    flex-wrap:wrap;
+}
+#your_hand, #opp_hand{
+    background-color: lightblue;
+    display:flex;
+    flex-wrap:wrap;
+    width:20%;
+    margin:auto;
+}
+
+#tablero{
+    background-color: lightgray;
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    width:40%;
+    margin: auto;
+    div{
+        width:25%;
+        img{
+            margin: auto;
+        }
+        
+    }
+}
+
