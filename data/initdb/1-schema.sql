@@ -20,7 +20,8 @@ CREATE TABLE private.lobbies(
 CREATE TABLE private.cartas(
     nombre VARCHAR(255) PRIMARY KEY,
     info CHAR(4) NOT NULL,
-    directions VARCHAR(255)
+    directions VARCHAR(255),
+    team VARCHAR(255)
 );
 
 /*

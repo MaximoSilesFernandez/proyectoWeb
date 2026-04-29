@@ -20,18 +20,36 @@ main{
 }
 
 #tablero{
-    background-color: lightgray;
+    --background-color: lightgray;
     display: flex;
     justify-content: space-around;
     flex-wrap: wrap;
-    width:40%;
+    width:408px;
+    height: 480px;
     margin: auto;
+    padding-left:40px;
+    padding-right:40px;
+    padding-top: 20px;
+    background-image: url(../src/assets/fondo.png);
+    background-repeat: no-repeat;
+    background-size: cover;
     div{
-        width:25%;
-        img{
-            margin: auto;
-        }
+        width:84px;
+        height: 102px;
+        background-repeat: no-repeat;
+        background-size: cover;
         
     }
 }
+
+
+.info{
+    --display: flex ;
+    position: relative;
+    width: 14px;
+    height: 14px;
+    top:70%;
+    left:17%;
+}
+
 

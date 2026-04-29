@@ -42,7 +42,7 @@ document.addEventListener("click", (event) =>{
         tablero?.forEach(casilla =>{
             
             const div=casilla as HTMLDivElement;
-            div.children[0].setAttribute("src","../src/assets/typescript.svg");
+            //div.children[0].setAttribute("src","../src/assets/typescript.svg");
         });
     }
 });
@@ -54,22 +54,25 @@ function drawTablero(mapa: Map<number,Carta>){
         const casilla=(document.getElementById(`${i}`) as HTMLDivElement);
         const img=casilla.children[0] as HTMLImageElement;
 
-        for (let j=1; j<=4; j++){
-            (casilla.children[j] as HTMLImageElement).setAttribute("src",`../src/info/${mapa.get(i)?.info.charAt(j-1)}.png`);
+        for (let j=0; j<4; j++){
+            (casilla.children[j] as HTMLImageElement).setAttribute("src",`../src/assets/info/${mapa.get(i)?.info.charAt(j)}.png`);
             
         }
-        img.setAttribute("src",`../src/Cartas/${mapa.get(i)?.name}${(mapa.get(i)?.team=='enemy')? '_opp' : ''}.png`); 
+        casilla.style.backgroundImage=`url(../src/assets/Cartas/${mapa.get(i)?.name}${(mapa.get(i)?.team=='enemy')? '_opp' : ''}.png)`; 
         
     }
 }
 await getCartas();
 async function getCartas(){
-    const cartas=["Bomb","Skeleton","Flan","Fang","Goblin"];
+    const cartas=["Bomb","Skeleton","Flan","Fang","Goblin","Skeleton","Skeleton","Skeleton","Skeleton","Skeleton","Skeleton","Skeleton","Skeleton","Skeleton","Skeleton","Skeleton"];
     const cartas_info=await getCarta(cartas);
     for (let i = 1; i <= cartas_info.length; i++) {
-
-        const img=(document.getElementById(`${i}`) as HTMLDivElement).children[0] as HTMLImageElement;
-        img.setAttribute("src",`../src/Cartas/yours/${cartas_info[i-1].name}.png`);
+        const casilla=(document.getElementById(`${i}`) as HTMLDivElement);
+        casilla.style.backgroundImage=`url(../src/assets/Cartas/${cartas_info[i-1].name}.png)`;
+        for (let j=0; j<4; j++){
+            (casilla.children[j] as HTMLImageElement).setAttribute("src",`../src/assets/info/${cartas_info[i-1].info.charAt(j)}.png`);
+            
+        }
     }
 }
 
