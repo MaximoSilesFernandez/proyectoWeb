@@ -1,10 +1,9 @@
 
 export interface Carta {
     name: string,
-    hp: number,
-    atk: number,
-    def: number,
-    directions: string;
+    info: string,
+    directions: string,
+    team: string;
 }
 
 
@@ -38,7 +37,7 @@ export async function getTablero(code:string){
         method: "GET",
         headers: {
             "Content-Type": "application/json",
-            "code": code
+            "code": code as string
         }
     });
     return await res.json() as Map<number,Carta>;
@@ -53,4 +52,21 @@ export async function createTablero(code:string){
         },
         body: JSON.stringify({code: code})
     })
+}
+
+export async function getCarta(cartas:string[]){
+    const res=await fetch(`http://localhost:3000/getCarta`,{
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            "cartas":  cartas.join(",") as string
+        }
+    })
+    const data=await res.json() as any[];
+    const carts= [] as Carta[];
+    for (const carta of data){
+        carts.push({name: carta.nombre, info: carta.info, directions: carta.directions, team: 'ally'});
+    }
+    console.log(carts);
+    return carts;
 }
