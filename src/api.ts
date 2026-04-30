@@ -67,6 +67,5 @@ export async function getCarta(cartas:string[]){
     for (const carta of data){
         carts.push({name: carta.nombre, info: carta.info, directions: carta.directions, team: 'ally'});
     }
-    console.log(carts);
     return carts;
 }

@@ -2,8 +2,22 @@ import express from 'express';
 import jsonwebtoken from 'jsonwebtoken';
 import pg from 'pg';
 import dotenv from 'dotenv';
+import expressWs from 'express-ws';
+
 
 dotenv.config();
+
+/*
+expressWs(express())
+
+const router = express.Router()
+
+router.ws('/', (ws, req) => {
+    ws.on('message', msg => {
+        console.log(msg)
+    })
+})*/
+
 
 async function newClient(){
     return new pg.Client({

@@ -10,13 +10,22 @@ main{
     width:80%;
     margin: auto;
     flex-wrap:wrap;
+    
 }
 #your_hand, #opp_hand{
     background-color: lightblue;
     display:flex;
     flex-wrap:wrap;
     width:20%;
+    height: 500px;
     margin:auto;
+    div{
+        width:84px;
+        height: 102px;
+        background-repeat: no-repeat;
+        background-size: cover;
+        
+    }
 }
 
 #tablero{
