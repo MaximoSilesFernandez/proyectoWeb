@@ -5,18 +5,23 @@ import dotenv from 'dotenv';
 import expressWs from 'express-ws';
 
 
+
 dotenv.config();
 
-/*
-expressWs(express())
 
-const router = express.Router()
+const appExpress= express();
+const ws = expressWs(appExpress);
+const app=ws.app;
 
-router.ws('/', (ws, req) => {
+
+
+app.ws('/match', (ws, req) => {
+    console.log(req.url);
     ws.on('message', msg => {
         console.log(msg)
+        ws.send('xd')
     })
-})*/
+});
 
 
 async function newClient(){
@@ -29,7 +34,6 @@ async function newClient(){
     });
 }
 
-const app= express();
 
 app.use(express.json());
 app.use(express.urlencoded());
@@ -69,16 +73,15 @@ app.get('/getMap', async (req,res) =>{
 app.get('/getCarta', async (req,res) =>{
     const cartas_nombre=((req.headers.cartas as string).split(",")) as string[];
     const cartas=[];
-    console.log(cartas_nombre);
     const client= await newClient();
     await client.connect();
     try {
         for (const carta of cartas_nombre) {
-            console.log(carta);
+
             const result = await client.query("SELECT * FROM private.cartas WHERE nombre=$1",[carta]);
             cartas.push(result.rows[0] as any);
         }
-        console.log(cartas);
+
         res.json(cartas);
     } catch (err) {
         console.log(err);
@@ -86,4 +89,58 @@ app.get('/getCarta', async (req,res) =>{
     } finally {
         client.end();
     }
-})
+});
+
+app.post('/newMatch', async (req, res) =>{
+    const code=req.headers.code as string;
+    const decoded= await verifyTokenUser((req.headers.authorization as string).substring(7)) as any; 
+    const mapa=req.body;
+    const client=await newClient();
+    await client.connect();
+
+    
+    try{
+        await client.query('INSERT INTO private.lobbies (code,host_id,map) VALUES ($1,$2,$3)',[code,decoded.id,mapa])
+    } catch(err){
+        console.log(err)
+    } finally{
+        client.end();
+    }
+});
+
+
+app.post('/addOpponent', async (req,res) =>{
+    const code=req.headers.code as string;
+    const decoded= await verifyTokenUser((req.headers.authorization as string).substring(7)) as any; 
+    const client=await newClient();
+    await client.connect();
+    
+    try{
+        await client.query('UDPATE private.lobbies SET opponent_id=$1 WHERE code=$2',[decoded.id,code])
+        const mapa= await client.query('SELECT private.lobbies.map FROM private.lobbies WHERE code=$1',[code])
+        res.json(mapa)
+    } catch(err){
+
+    } finally{
+        client.end()
+    }
+});
+
+
+async function createTokenUser(id:number){
+    
+    const client= await newClient();
+    await client.connect();
+    const user_name= await client.query('SELECT private.players.name FROM private.players WHERE private.players.id=$1',[id])
+    await client.end();
+    return jsonwebtoken.sign({name: user_name, id:id}, (process.env.TOKEN_PRIVATE_KEY as any).replace(/\\n/g, '\n') as any, {algorithm: process.env.TOKEN_DIGEST as any});
+}
+
+async function verifyTokenUser(userToken:string){
+    return new Promise( (resolve,reject) =>{
+        jsonwebtoken.verify(userToken,(process.env.TOKEN_PRIVATE_KEY as string).replace(/\\n/g, '\n'), (err,decoded) =>{
+        if (err) reject(false);
+        else resolve(decoded);
+    });
+    });
+}

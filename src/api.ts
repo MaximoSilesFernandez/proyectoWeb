@@ -69,3 +69,8 @@ export async function getCarta(cartas:string[]){
     }
     return carts;
 }
+const socket = new WebSocket('ws://localhost:3000/match?room=1234')
+
+socket.addEventListener('message', (res) =>{
+    console.log(res)
+})

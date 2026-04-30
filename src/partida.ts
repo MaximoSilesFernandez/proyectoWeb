@@ -5,7 +5,8 @@ const tablero= document.querySelector("main")?.querySelectorAll("div>div");
 
 
 let mapa= new Map<number,Carta>();
-
+let baraja= [] as Carta[];
+let baraja_opp= [] as Carta[];
 let place= [] as number[];
 
 //mapa= await getTablero(localStorage.getItem("code") as string);
@@ -45,7 +46,7 @@ document.addEventListener("click", (event) =>{
 
 
 function drawTablero(mapa: Map<number,Carta>){
-    for (let i=-4; i<22; i++){
+    for (let i=-4; i<17; i++){
         const casilla=(document.getElementById(`${i}`) as HTMLDivElement);
         const info= mapa.get(i)?.info as string || "";
 
@@ -70,25 +71,18 @@ async function getCartas(){
 
     let x=0;
 
-    for (let i = -4; i < 22; i++) {
+    for (let i = -4; i < 17; i++) {
         if (i<1) mapa.set(i,cartas_info[i+4])
-        else if(i<17){
+        else{
             if (x<3){
                 if (Math.random()*100<20){
                     mapa.set(i,{name: 'blocked',info:'',directions:'',team: ''})
                     x++;
                     continue;
-                } 
-                
+                }     
             } 
-
-            mapa.set(i,{name: 'empty',info:'',directions:'',team: ''})
-            
-            
-        } else{
-            console.log(i)
-            mapa.set(i,{name: 'unknown',info:'',directions:'',team: ''})
-        }
+            mapa.set(i,{name: 'empty',info:'',directions:'',team: ''})            
+        } 
     }
     drawTablero(mapa)
 }

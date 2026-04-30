@@ -12,7 +12,7 @@ CREATE TABLE private.players(
 CREATE TABLE private.lobbies(
     code CHAR(5) PRIMARY KEY,
     host_id INTEGER NOT NULL REFERENCES private.players(id) UNIQUE,
-    opponent_id INTEGER REFERENCES private.players(id) UNIQUE,
+    opponent_id INTEGER REFERENCES private.players(id) UNIQUE DEFAULT null,
     map VARCHAR(255)
 );
 
@@ -20,8 +20,7 @@ CREATE TABLE private.lobbies(
 CREATE TABLE private.cartas(
     nombre VARCHAR(255) PRIMARY KEY,
     info CHAR(4) NOT NULL,
-    directions VARCHAR(255),
-    team VARCHAR(255)
+    directions VARCHAR(255)
 );
 
 /*
