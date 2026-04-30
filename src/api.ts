@@ -6,7 +6,49 @@ export interface Carta {
     team: string;
 }
 
+export async function login(name : string, pass : string) {
+  const response = await fetch("http://localhost:3000/login", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ name, pass }),
+  });
 
+  if (response.status === 403) {
+    throw new Error("Incorrect email or password");
+  }
+
+  return await response.json();
+}
+
+export async function signup(name: string, pass: string) {
+  const response = await fetch("http://localhost:3000/signup", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ name, pass }),
+  });
+
+  if (response.status === 409) {
+    throw new Error("A user already exists with this email");
+  }
+  return await response.json();
+}
+
+export async function verifyToken(token: string){
+  const response=await fetch("http://localhost:3000/verifyUser", {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    }
+  });
+
+  return await response.json();
+
+}
 
 
 export async function verifyCode(code:string){
@@ -20,6 +62,9 @@ export async function verifyCode(code:string){
     });
     return res.status===200;
 }
+
+
+
 
 export async function updateTablero(code:string,tablero:Map<number,Carta>){
     await fetch(`http://localhost:3000/updateMap`,{
@@ -69,8 +114,9 @@ export async function getCarta(cartas:string[]){
     }
     return carts;
 }
-const socket = new WebSocket('ws://localhost:3000/match?room=1234')
 
-socket.addEventListener('message', (res) =>{
-    console.log(res)
-})
+
+export async function getWebSocket(code:string, user:string,token:string){
+    return new WebSocket(`ws://localhost:3000/match?room=${code}&user=${user}&token=${token}`)
+}
+

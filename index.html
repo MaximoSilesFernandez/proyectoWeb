@@ -9,13 +9,24 @@
   </head>
   <body>
     <div>
+      <label>Name: <input type="text" name="email" required id="name_login" /></label>
+      <label>Password: <input type="password" name="pass" required id="pass_login" /></label>
+      <button type="button" id="loginButton">Login</button>
+    </div>
+
+    <div >
+      <label>Name: <input type="text" name="email" required id="name_signup" /></label>
+      <label>Password: <input type="password" name="pass" required id="pass_signup" /></label>
+      <button type="button" id="signUpButton">SignUp</button>
+    </div>
+
+    <div>
       <button id="createLoby">CreateLoby</button>
     </div>
     <div>
       <button id="joinLoby">JoinLoby</button>
     </div>
-    
-    <a href="./partida/">Partida</a>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

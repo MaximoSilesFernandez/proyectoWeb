@@ -1,7 +1,44 @@
-import {verifyCode} from "./api.ts";
+import {verifyCode,signup,login} from "./api.ts";
 
 const createLobyButton = document.getElementById("createLoby") as HTMLButtonElement;
 const joinLobyButton = document.getElementById("joinLoby") as HTMLButtonElement;
+const loginButton=document.getElementById("loginButton") as HTMLButtonElement;
+const signUpButton=document.getElementById("signUpButton") as HTMLButtonElement;
+
+const divs=document.querySelectorAll("div") as NodeListOf<HTMLDivElement>;
+
+async function changingDiv(){
+    for (let i = 0; i < 4; i++) {
+        divs[i].classList.toggle("hidden");
+        
+    }
+}
+
+if (localStorage.getItem('token')){
+    divs[0].classList.add("hidden");
+    divs[1].classList.add("hidden");
+} else{
+    divs[2].classList.add("hidden");
+    divs[3].classList.add("hidden");
+}
+
+loginButton.addEventListener("click", async ()=>{
+    const name=(document.getElementById("name_login") as HTMLInputElement).value;
+    const pass=(document.getElementById("pass_login") as HTMLInputElement).value;
+    const token=await login(name,pass);
+    localStorage.setItem("token",token.token);
+
+    changingDiv();
+    
+});
+
+signUpButton.addEventListener("click", async ()=>{
+    const name=(document.getElementById("name_signup") as HTMLInputElement).value;
+    const pass=(document.getElementById("pass_signup") as HTMLInputElement).value;
+    const token=await signup(name,pass);
+    localStorage.setItem("token",token.token);
+    changingDiv();
+});
 
 
 createLobyButton.addEventListener("click",(event)=>{

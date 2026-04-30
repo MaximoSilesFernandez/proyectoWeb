@@ -3,7 +3,7 @@ import jsonwebtoken from 'jsonwebtoken';
 import pg from 'pg';
 import dotenv from 'dotenv';
 import expressWs from 'express-ws';
-
+import crypto from 'crypto';
 
 
 dotenv.config();
@@ -14,14 +14,43 @@ const ws = expressWs(appExpress);
 const app=ws.app;
 
 
+const clientMatches=new Map<String,String[]>();
+const clients=new Map<String,any>();
 
 app.ws('/match', (ws, req) => {
-    console.log(req.url);
-    ws.on('message', msg => {
-        console.log(msg)
-        ws.send('xd')
+    const token=req.query.token as string
+    const room=req.query.room as string
+
+    clients.set(token as string,ws); 
+    if (!clientMatches.get(room)){
+        
+        clientMatches.set(room, [token])
+    } else{
+        const value=clientMatches.get(room) as any[];
+        if (!value.includes(token)){
+            value.push(token);
+            clientMatches.set(room, value);
+        } 
+    }
+
+    console.log(clients);
+    console.log(clientMatches)
+    
+    ws.on('message', (msg:string) => {
+        const tokens=clientMatches.get(msg) as string[];
+
+        const players=[] as any[];
+        for (const token of tokens){
+            players.push(clients.get(token));
+        }
+        players.forEach(player  => {
+            console.log("a")
+            player.send("xd");
+        });
     })
+    
 });
+
 
 
 async function newClient(){
@@ -127,13 +156,76 @@ app.post('/addOpponent', async (req,res) =>{
 });
 
 
-async function createTokenUser(id:number){
+app.get( '/verifyUser' , async (req,res) =>{
+    
+    const decoded= await verifyTokenUser((req.headers.authorization as string).substring(7)) as any;
+
+    res.json({name: decoded.name, id: decoded.id});
+});
+
+app.post( '/login' , async (req,res) =>{
+    console.log("Login doing")
+
+    const client= await newClient();
+    await client.connect();
+    const x=await client.query(`SELECT private.players.name, password FROM private.players WHERE private.players.name=$1`,[req.body.name])
+    const user=x.rows[0] as any;
+    await client.end();
+
+    if (user && await verifyPassword(req.body.pass,user.password)){
+        res.json({token: await createTokenUser(user.name)});
+    }
+    res.status(403).json();
+})
+
+
+app.post( '/signup' , async (req,res) =>{
+    console.log("Signup doing")
+
+    const client= await newClient();
+    client.connect();
+    const name=req.body.name;
+    const cryptoKey= await cryptoPassword(req.body.pass) as any;
+    await client.query('INSERT INTO private.players (name,password) VALUES ($1,$2) ',[name, cryptoKey.toString('hex')]).then(async () =>{
+
+        client.end();
+        res.json({token: await createTokenUser(name)});
+    }).catch((err) =>{
+
+        console.log(err)
+        client.end();
+        res.status(409).json();
+    });
+
+});
+
+async function cryptoPassword(password: string){
+    return new Promise((resolve,reject) => {
+        crypto.pbkdf2(password,(process.env.CRYPTO_SALT as any),parseInt(process.env.CRYPTO_INTERATIONS as any),parseInt(process.env.CRYPTO_LENGTH as any),process.env.CRYPTO_DIGEST as any, (err,derivedKey) =>{
+        if (err) reject(err);
+        else{
+            resolve(derivedKey);
+        } 
+    });
+    });
+}
+
+async function verifyPassword(password: string,encPassword :string){
+    const newPassword= await cryptoPassword(password) as any;
+    try{
+        return crypto.timingSafeEqual(Buffer.from(encPassword,'hex'),newPassword);
+    } catch{
+        return false;
+    }
+}
+
+async function createTokenUser(name:string){
     
     const client= await newClient();
     await client.connect();
-    const user_name= await client.query('SELECT private.players.name FROM private.players WHERE private.players.id=$1',[id])
+    const id= await client.query('SELECT private.players.id FROM private.players WHERE private.players.name=$1',[name])
     await client.end();
-    return jsonwebtoken.sign({name: user_name, id:id}, (process.env.TOKEN_PRIVATE_KEY as any).replace(/\\n/g, '\n') as any, {algorithm: process.env.TOKEN_DIGEST as any});
+    return jsonwebtoken.sign({name: name, id:id}, (process.env.TOKEN_PRIVATE_KEY as any).replace(/\\n/g, '\n') as any, {algorithm: process.env.TOKEN_DIGEST as any});
 }
 
 async function verifyTokenUser(userToken:string){
