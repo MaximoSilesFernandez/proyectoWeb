@@ -52,15 +52,18 @@ export async function verifyToken(token: string){
 
 
 export async function verifyCode(code:string){
-
+    console.log("a")
     const res=await fetch(`http://localhost:3000/verifyCode`,{
         method: "GET",
         headers: {
             "Content-Type": "application/json",
-            "code": code
+            "code":  code
         }
-    });
-    return res.status===200;
+    }).catch(err =>{
+        console.log(err)
+    })
+    console.log(res);
+    return (res)? true : false;
 }
 
 
@@ -89,17 +92,36 @@ export async function getTablero(code:string){
     
 }
 
-export async function createTablero(code:string){
-    await fetch(`http://localhost:3000/createMap`,{
+export async function createTablero(code:string,token:string){
+    let x=0;
+    const mapa=new Map<Number,Carta>();
+
+    for (let i = 1; i < 17; i++) {
+        if (x<3){
+            if (Math.random()*100<20){
+                mapa.set(i,{name: 'blocked',info:'',directions:'',team: ''})
+                x++;
+                continue;
+            }     
+        } 
+        mapa.set(i,{name: 'empty',info:'',directions:'',team: ''})            
+    } 
+
+
+    await fetch(`http://localhost:3000/newMatch`,{
         method: "POST",
         headers:{
-            "Content-Type":"application/json"
+            "Content-Type":"application/json",
+            "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({code: code})
+        body: JSON.stringify({code: code, mapa: JSON.stringify(Object.fromEntries(mapa)).split(/(?<=},)/)})
     })
+
 }
 
-export async function getCarta(cartas:string[]){
+
+
+export async function getCarta(cartas:string[], team:string){
     const res=await fetch(`http://localhost:3000/getCarta`,{
         method: "GET",
         headers: {
@@ -110,7 +132,7 @@ export async function getCarta(cartas:string[]){
     const data=await res.json() as any[];
     const carts= [] as Carta[];
     for (const carta of data){
-        carts.push({name: carta.nombre, info: carta.info, directions: carta.directions, team: 'ally'});
+        carts.push({name: carta.nombre, info: carta.info, directions: carta.directions, team: team});
     }
     return carts;
 }
@@ -120,3 +142,18 @@ export async function getWebSocket(code:string, user:string,token:string){
     return new WebSocket(`ws://localhost:3000/match?room=${code}&user=${user}&token=${token}`)
 }
 
+
+
+export async function determineRol(code:string, token:string){
+    const res=await fetch(`http://localhost:3000/determineRol`,{
+        method: "GET",
+        headers:{
+            "Content-Type":"application/json",
+            "Authorization": `Bearer ${token}`,
+            "code": code
+        },
+    });
+
+    return await res.json();
+
+}

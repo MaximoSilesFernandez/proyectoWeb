@@ -1,4 +1,4 @@
-import {verifyCode,signup,login} from "./api.ts";
+import {verifyCode,signup,login,determineRol} from "./api.ts";
 
 const createLobyButton = document.getElementById("createLoby") as HTMLButtonElement;
 const joinLobyButton = document.getElementById("joinLoby") as HTMLButtonElement;
@@ -48,6 +48,7 @@ createLobyButton.addEventListener("click",(event)=>{
     }
     console.log(code);
     localStorage.setItem("code",code);
+    localStorage.setItem("rol",'host');
     window.location.replace("/partida/?code="+code)
     
 
@@ -60,8 +61,11 @@ joinLobyButton.addEventListener("click",(event)=>{
                    <button id="join">Join</button>`;
     document.getElementById("join")?.addEventListener("click",async (event)=>{
         const code=(document.getElementById("code") as HTMLInputElement)?.value as string
-        if ( await verifyCode(code)) {
+        const existe=await verifyCode(code);
+        if ( existe) {
             localStorage.setItem("code", code )
+            const role= await determineRol(code,localStorage.getItem('token') as string);
+            localStorage.setItem("rol",role);
             window.location.replace("/partida/?code="+code);
         } else {
             ((event.target as HTMLButtonElement).parentElement as HTMLDivElement).innerHTML+=`<p style="color:red">Código incorrecto</p>`;

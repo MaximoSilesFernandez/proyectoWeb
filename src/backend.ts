@@ -6,6 +6,7 @@ import expressWs from 'express-ws';
 import crypto from 'crypto';
 
 
+
 dotenv.config();
 
 
@@ -17,7 +18,11 @@ const app=ws.app;
 const clientMatches=new Map<String,String[]>();
 const clients=new Map<String,any>();
 
-app.ws('/match', (ws, req) => {
+
+
+
+
+app.ws('/match', async (ws, req) => {
     const token=req.query.token as string
     const room=req.query.room as string
 
@@ -30,24 +35,48 @@ app.ws('/match', (ws, req) => {
         if (!value.includes(token)){
             value.push(token);
             clientMatches.set(room, value);
+            if (clientMatches.get(room)?.length==2){
+                console.log("hay dos")
+                const players=clientMatches.get(room) as string[];
+                await createLobby(room,players[0] , players[1]);
+            }
         } 
     }
 
-    console.log(clients);
-    console.log(clientMatches)
-    
-    ws.on('message', (msg:string) => {
-        const tokens=clientMatches.get(msg) as string[];
+    //console.log(clients);
+    //console.log(clientMatches)
+    ws.on('open', () =>{
+
+    });
+    ws.on('message', async (msg:string) => {
+        const mensage=JSON.parse(msg);
+        const tokens=clientMatches.get(mensage.code as string) as string[];
 
         const players=[] as any[];
         for (const token of tokens){
             players.push(clients.get(token));
         }
-        players.forEach(player  => {
-            console.log("a")
-            player.send("xd");
-        });
+        if (mensage.msg==='getTablero'){
+            const mapa=await getMap(mensage.code) as string;
+            if (mapa){
+                players.forEach(player  => {
+                    player.send(JSON.stringify({mapa: mapa, msg:'sendTablero'}));
+                });
+            } else{
+                players.forEach(player  => {
+                    player.send(JSON.stringify({mapa: '', msg:'createTablero'}));
+                });
+            }
+        } else if(mensage.msg==='updateTablero'){
+            await updateMap(mensage.code,mensage.tablero);
+            const mapa=await getMap(mensage.code) as string;
+            players.forEach(player  => {
+                    player.send(JSON.stringify({mapa: mapa, msg:'sendTablero'}));
+            });
+        }
+
     })
+
     
 });
 
@@ -76,27 +105,87 @@ app.listen(3000,() =>{
     console.log('Backend is running in 3000')
 });
 
-
-app.get('/verifyCode',async (req,res) =>{
-    const code=req.headers.code as string;
-
+async function createLobby(code:string,host_token:string,opp_token:string){
+    console.log('creatinglobby')
+    const decoded_host=await verifyTokenUser(host_token) as any;
+    const decoded_opp=await verifyTokenUser(opp_token) as any;
     const client= await newClient();
-    await client.query('SELECT code FROM private.lobbies WHERE code=$1', [code]).then( () =>{
-        res.status(200).send();
-    }).catch( () =>{
-        res.status(201).send();
-    });
-    client.end();
-});
+    await client.connect();
 
-app.get('/getMap', async (req,res) =>{
-    const code=req.headers.code as string;
+    console.log(decoded_host.id);
+    console.log(decoded_opp.id)
+
+    try{
+        await client.query('INSERT INTO private.lobbies(code,host_id,opponent_id,map) VALUES ($1,$2,$3,$4);',[code,parseInt(decoded_host.id),parseInt(decoded_opp.id),code])
+        
+    } catch (err){
+        console.log(err);
+    } finally{
+        client.end();
+    }
+
+}
+
+
+async function updateMap(code:string,new_mapa:string[]){
     const client= await newClient();
-    const map= await client.query("SELECT map FROM private.lobbies WHERE code=$1",[code]).catch( (err) =>{
-        res.status(400).send();
-    });
-    client.end();
-    res.json(map);
+    await client.connect();
+    try{
+        for (let i = 1; i < 17; i++) {
+            await client.query(`UPDATE private.tablero SET c_${i}=$1 WHERE code=$2`,[new_mapa[i-1],code])
+        }
+    } catch(err){
+        console.log(err)
+    } finally{
+        client.end();
+    }
+}
+
+
+async function getMap(code:string){
+    console.log("gettingMap");
+    const client= await newClient();
+    let mapa="";
+    await client.connect();
+    try{
+        for (let i = 1; i < 17; i++) {
+            const casilla=(await client.query(`SELECT c_${i} FROM private.tablero WHERE code=$1`,[code])).rows[0];
+            if (!casilla) return undefined;
+            mapa+=(Object.values(casilla)[0]);
+        }
+        return mapa;
+    } catch (err){
+        console.log(err)
+    } finally{
+        client.end();
+    }
+    
+
+}
+
+app.get('/determineRol', async (req , res)=>{
+    const code=req.headers.code as string;
+    const decoded= await verifyTokenUser((req.headers.authorization as string).substring(7)) as any;
+
+    const client=await newClient();
+    await client.connect();
+    try{
+        const lobby=(await client .query('SELECT * FROM private.lobbies WHERE code=$1',[code])).rows[0] as any;
+        if (lobby) {
+            const supposed_id=(await client .query('SELECT opponent_id FROM private.lobbies WHERE code=$1',[code])).rows[0].opponent_id as any;
+            res.json( (supposed_id===decoded.id)? 'opponent':'spectator');
+        } else{
+            console.log("No hay lobby")
+            res.json('opponent');
+        }
+    } catch(err){
+        console.log(err);
+        return 'spectator';
+    } finally{
+        client.end();
+    }
+
+
 });
 
 app.get('/getCarta', async (req,res) =>{
@@ -121,21 +210,29 @@ app.get('/getCarta', async (req,res) =>{
 });
 
 app.post('/newMatch', async (req, res) =>{
-    const code=req.headers.code as string;
-    const decoded= await verifyTokenUser((req.headers.authorization as string).substring(7)) as any; 
-    const mapa=req.body;
+    console.log("creandoTabla");
+    const code=req.body.code as string;
+    const decoded= await verifyTokenUser((req.headers.authorization as string).substring(7)) as any;
+    if (!decoded) return; 
+    const mapa=req.body.mapa;
     const client=await newClient();
     await client.connect();
 
-    
     try{
-        await client.query('INSERT INTO private.lobbies (code,host_id,map) VALUES ($1,$2,$3)',[code,decoded.id,mapa])
+        await client.query('INSERT INTO private.tablero (code) VALUES ($1)',[code]);
+        for (let i = 1; i < 17; i++) {
+            await client.query(`UPDATE private.tablero SET c_${i}=$1 WHERE code=$2`,[mapa[i-1],code])
+        }
     } catch(err){
+        
         console.log(err)
     } finally{
         client.end();
     }
 });
+
+
+
 
 
 app.post('/addOpponent', async (req,res) =>{
@@ -145,7 +242,7 @@ app.post('/addOpponent', async (req,res) =>{
     await client.connect();
     
     try{
-        await client.query('UDPATE private.lobbies SET opponent_id=$1 WHERE code=$2',[decoded.id,code])
+        await client.query('UPDATE private.lobbies SET opponent_id=$1 WHERE code=$2',[decoded.id,code])
         const mapa= await client.query('SELECT private.lobbies.map FROM private.lobbies WHERE code=$1',[code])
         res.json(mapa)
     } catch(err){
@@ -199,6 +296,21 @@ app.post( '/signup' , async (req,res) =>{
 
 });
 
+app.get('/verifyCode', async (req,res) =>{
+    const code=req.headers.code as string;
+    const client= await newClient();
+    await client.connect();
+    try{
+        res.json(await client.query('SELECT * FROM private.tablero WHERE private.tablero.code=$1',[code]));
+    } catch (err){
+        console.log(err)
+    } finally{
+        client.end();
+    }
+});
+
+
+
 async function cryptoPassword(password: string){
     return new Promise((resolve,reject) => {
         crypto.pbkdf2(password,(process.env.CRYPTO_SALT as any),parseInt(process.env.CRYPTO_INTERATIONS as any),parseInt(process.env.CRYPTO_LENGTH as any),process.env.CRYPTO_DIGEST as any, (err,derivedKey) =>{
@@ -223,7 +335,7 @@ async function createTokenUser(name:string){
     
     const client= await newClient();
     await client.connect();
-    const id= await client.query('SELECT private.players.id FROM private.players WHERE private.players.name=$1',[name])
+    const id= (await client.query('SELECT private.players.id FROM private.players WHERE private.players.name=$1',[name]) as any).rows[0].id;
     await client.end();
     return jsonwebtoken.sign({name: name, id:id}, (process.env.TOKEN_PRIVATE_KEY as any).replace(/\\n/g, '\n') as any, {algorithm: process.env.TOKEN_DIGEST as any});
 }

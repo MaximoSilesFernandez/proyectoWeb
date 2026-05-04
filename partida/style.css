@@ -36,9 +36,9 @@ main{
     width:408px;
     height: 480px;
     margin: auto;
-    padding-left:40px;
+    padding-left:20px;
     padding-right:40px;
-    padding-top: 20px;
+    padding-top: 0px;
     background-image: url(../src/assets/fondo.png);
     background-repeat: no-repeat;
     background-size: cover;
