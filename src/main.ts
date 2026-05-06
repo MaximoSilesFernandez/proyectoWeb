@@ -14,6 +14,12 @@ async function changingDiv(){
     }
 }
 
+localStorage.removeItem('baraja');
+localStorage.removeItem('code');
+localStorage.removeItem('yourTurn');
+localStorage.removeItem('currentTurn');
+localStorage.removeItem('rol');
+
 if (localStorage.getItem('token')){
     divs[0].classList.add("hidden");
     divs[1].classList.add("hidden");

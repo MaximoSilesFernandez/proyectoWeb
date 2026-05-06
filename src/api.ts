@@ -107,7 +107,6 @@ export async function createTablero(code:string,token:string){
         mapa.set(i,{name: 'empty',info:'',directions:'',team: ''})            
     } 
 
-
     await fetch(`http://localhost:3000/newMatch`,{
         method: "POST",
         headers:{
@@ -115,7 +114,7 @@ export async function createTablero(code:string,token:string){
             "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({code: code, mapa: JSON.stringify(Object.fromEntries(mapa)).split(/(?<=},)/)})
-    })
+    }).catch((err) =>{console.log(err)}) 
 
 }
 
@@ -140,6 +139,10 @@ export async function getCarta(cartas:string[], team:string){
 
 export async function getWebSocket(code:string, user:string,token:string){
     return new WebSocket(`ws://localhost:3000/match?room=${code}&user=${user}&token=${token}`)
+}
+
+export async function getWebSocketEvent(){
+    return new WebSocket(`ws://localhost:3000/event`);
 }
 
 

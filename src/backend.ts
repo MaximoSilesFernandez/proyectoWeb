@@ -4,6 +4,7 @@ import pg from 'pg';
 import dotenv from 'dotenv';
 import expressWs from 'express-ws';
 import crypto from 'crypto';
+import { matchesGlob } from 'path';
 
 
 
@@ -19,13 +20,13 @@ const clientMatches=new Map<String,String[]>();
 const clients=new Map<String,any>();
 
 
-
+let comienza: string;
 
 
 app.ws('/match', async (ws, req) => {
     const token=req.query.token as string
     const room=req.query.room as string
-
+    console.log(room)
     clients.set(token as string,ws); 
     if (!clientMatches.get(room)){
         
@@ -39,11 +40,18 @@ app.ws('/match', async (ws, req) => {
                 console.log("hay dos")
                 const players=clientMatches.get(room) as string[];
                 await createLobby(room,players[0] , players[1]);
+
+                const two_players=[] as any[];
+                for (const player of players){
+                    two_players.push(clients.get(player));
+                }
+                two_players.forEach( (player) =>{
+                    player.send(JSON.stringify({msg:'matchBegin',first_turn: comienza}));
+                });
             }
         } 
     }
-
-    //console.log(clients);
+    console.log(clientMatches)
     //console.log(clientMatches)
     ws.on('open', () =>{
 
@@ -51,7 +59,7 @@ app.ws('/match', async (ws, req) => {
     ws.on('message', async (msg:string) => {
         const mensage=JSON.parse(msg);
         const tokens=clientMatches.get(mensage.code as string) as string[];
-
+        console.log(msg);
         const players=[] as any[];
         for (const token of tokens){
             players.push(clients.get(token));
@@ -60,7 +68,7 @@ app.ws('/match', async (ws, req) => {
             const mapa=await getMap(mensage.code) as string;
             if (mapa){
                 players.forEach(player  => {
-                    player.send(JSON.stringify({mapa: mapa, msg:'sendTablero'}));
+                    player.send(JSON.stringify({mapa: mapa, msg:'sendTablero',newTurn:false}));
                 });
             } else{
                 players.forEach(player  => {
@@ -71,7 +79,7 @@ app.ws('/match', async (ws, req) => {
             await updateMap(mensage.code,mensage.tablero);
             const mapa=await getMap(mensage.code) as string;
             players.forEach(player  => {
-                    player.send(JSON.stringify({mapa: mapa, msg:'sendTablero'}));
+                    player.send(JSON.stringify({mapa: mapa, msg:'sendTablero', newTurn:true}));
             });
         }
 
@@ -80,6 +88,25 @@ app.ws('/match', async (ws, req) => {
     
 });
 
+
+app.ws('/events', async (ws,req) =>{
+    
+    ws.on('message', async (msg: string) =>{
+        const mensage=JSON.parse(msg);
+        const attack=mensage.attack as string[];
+        const combo=mensage.combo as string[];
+
+        const tokens=clientMatches.get(mensage.code as string) as string[];
+        console.log(msg);
+        const players=[] as any[];
+        for (const token of tokens){
+            players.push(clients.get(token));
+        }
+        players.forEach(player =>{
+            player.send(JSON.stringify({attack: attack, combo: combo}))
+        })
+    })
+});
 
 
 async function newClient(){
@@ -111,7 +138,7 @@ async function createLobby(code:string,host_token:string,opp_token:string){
     const decoded_opp=await verifyTokenUser(opp_token) as any;
     const client= await newClient();
     await client.connect();
-
+    
     console.log(decoded_host.id);
     console.log(decoded_opp.id)
 
@@ -195,9 +222,13 @@ app.get('/getCarta', async (req,res) =>{
     await client.connect();
     try {
         for (const carta of cartas_nombre) {
-
-            const result = await client.query("SELECT * FROM private.cartas WHERE nombre=$1",[carta]);
-            cartas.push(result.rows[0] as any);
+            let result ;
+            if (carta==''){
+                result=`{name: 'empty', info: '', directions: '', team: ''}`
+            } else{
+                result = (await client.query("SELECT * FROM private.cartas WHERE nombre=$1",[carta])).rows[0];
+            }
+            cartas.push(result as any);
         }
 
         res.json(cartas);
@@ -223,6 +254,8 @@ app.post('/newMatch', async (req, res) =>{
         for (let i = 1; i < 17; i++) {
             await client.query(`UPDATE private.tablero SET c_${i}=$1 WHERE code=$2`,[mapa[i-1],code])
         }
+        comienza=((Math.random()*100<50)? 'host' : 'opponent');
+        res.send();
     } catch(err){
         
         console.log(err)
