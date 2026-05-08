@@ -141,8 +141,8 @@ export async function getWebSocket(code:string, user:string,token:string){
     return new WebSocket(`ws://localhost:3000/match?room=${code}&user=${user}&token=${token}`)
 }
 
-export async function getWebSocketEvent(){
-    return new WebSocket(`ws://localhost:3000/event`);
+export async function getWebSocketEvent(token:string){
+    return new WebSocket(`ws://localhost:3000/events?token=${token}`);
 }
 
 

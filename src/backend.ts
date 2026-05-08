@@ -59,7 +59,6 @@ app.ws('/match', async (ws, req) => {
     ws.on('message', async (msg:string) => {
         const mensage=JSON.parse(msg);
         const tokens=clientMatches.get(mensage.code as string) as string[];
-        console.log(msg);
         const players=[] as any[];
         for (const token of tokens){
             players.push(clients.get(token));
@@ -79,7 +78,7 @@ app.ws('/match', async (ws, req) => {
             await updateMap(mensage.code,mensage.tablero);
             const mapa=await getMap(mensage.code) as string;
             players.forEach(player  => {
-                    player.send(JSON.stringify({mapa: mapa, msg:'sendTablero', newTurn:true}));
+                    player.send(JSON.stringify({mapa: mapa, msg:'sendTablero', newTurn : mensage.newTurn}));
             });
         }
 
@@ -89,23 +88,31 @@ app.ws('/match', async (ws, req) => {
 });
 
 
+
+let clientEvent=new Map<String,any>();
+
 app.ws('/events', async (ws,req) =>{
-    
+    clientEvent.set(req.query.token as string,ws);
+    console.log('connected to wsEvent')
     ws.on('message', async (msg: string) =>{
         const mensage=JSON.parse(msg);
         const attack=mensage.attack as string[];
         const combo=mensage.combo as string[];
-
+        
         const tokens=clientMatches.get(mensage.code as string) as string[];
-        console.log(msg);
+        console.log("First attack "+attack+" combo "+combo);
         const players=[] as any[];
         for (const token of tokens){
-            players.push(clients.get(token));
+            players.push(clientEvent.get(token));
         }
         players.forEach(player =>{
-            player.send(JSON.stringify({attack: attack, combo: combo}))
+            player.send(JSON.stringify({attack: attack, mapa: mensage.tablero, combo: combo, turn: mensage.turn}))
         })
     })
+    ws.on('open', () =>{
+
+    });
+    
 });
 
 
