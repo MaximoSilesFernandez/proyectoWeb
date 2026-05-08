@@ -8,11 +8,16 @@ let mapa= new Map<number,Carta>();
 let baraja= [] as Carta[];
 let place= [] as number[];
 
+
+const codeInfoBattle=`<span class='resultado'><img src=''><img src=''></span>`
+
 const carts= ['Bomb','Fang','Flan','Goblin','Ironite','Lizzard','Sahagin','Skeleton','Zaghnol','Zombie'] as string[];
 
 
 const audioTakeOver=new Audio(`../src/assets/sounds/snd_bell.wav`);
+const audioBattle=new Audio(`../src/assets/sounds/snd_badexplosion.wav`)
 audioTakeOver.volume=0.2;
+audioBattle.volume=0.2;
 let currentTurn=1;
 let yourTurn=false;
 
@@ -87,22 +92,23 @@ wsEvent.addEventListener('message', async (mes) =>{
     drawTablero(mapa);
     await updateTurn(msg.turn);
     
-    await waitaS();
+    await waitaS(2);
     
     if (msg.attack.length==2){
         await animationTakeOver(msg.attack);
-        await audioTakeOver.play();
+
     } else{
-        await animationBattle(msg.attack);
-        await audioTakeOver.play();
+        await animationBattle(msg.attack, msg.res_battle);
+
     }
-    await waitaS();
+    await waitaS(2);
     if (msg.combo.length!=0){
         await animationCombo(msg.combo,msg.attack[0]);
     }
     first_attack=[];
     combo_affected=[];
-    if (yourTurn) ws.send(JSON.stringify({code: localStorage.getItem('code') as string, tablero: JSON.stringify(Object.fromEntries(mapa)).split(/(?<=},)/), msg: 'updateTablero'}))
+    resultado_battle=[];
+    ws.send(JSON.stringify({code: localStorage.getItem('code') as string, tablero: JSON.stringify(Object.fromEntries(mapa)).split(/(?<=},)/), msg: 'updateTablero'}))
 });
 
 wsEvent.OPEN;
@@ -236,6 +242,7 @@ async function action(carta: Carta){
 
 
 let first_attack=[] as number[];
+let resultado_battle=[] as number[];
 let combo_affected=[] as number[];
 
 async function scan_attacks(carta: Carta,position:number, combo:boolean = false){
@@ -371,15 +378,12 @@ async function attack(attacker:Carta,place_attacker:number,place_defender:number
         const atk_power=Number(attacker.info.charAt(0));
         let def_info=(attacker.info.charAt(1)=='P')? deffender.info.charAt(2) : deffender.info.charAt(3);
         const def_power=('ABCDEF'.includes(def_info))? (10+'ABCDEF'.indexOf(def_info)) : Number(def_info) ;
-        let attack_result;
-        attack_result=Math.random()*16+atk_power*16;
+        
+        let first_attack_result=Math.random()*16+atk_power*16;
+        let attack_result=first_attack_result-(Math.random()*first_attack_result+1);
 
-        attack_result-=Math.random()*attack_result+1;
-
-        let defense_result;
-        defense_result=Math.random()*16+def_power*16;
-
-        defense_result-=Math.random()*defense_result+1;
+        let first_defense_result=Math.random()*16+def_power*16;
+        let defense_result=first_defense_result-(Math.random()*first_defense_result+1);
 
         
         if (attack_result>=defense_result){
@@ -392,6 +396,10 @@ async function attack(attacker:Carta,place_attacker:number,place_defender:number
                 directions: deffender.directions,
                 team : (deffender.team=='ally')? 'opp' : 'ally'
             }
+            resultado_battle[0]=first_attack_result;
+            resultado_battle[1]=attack_result;
+            resultado_battle[2]=first_defense_result;
+            resultado_battle[3]=defense_result;
 
             console.log(mapa)
             await scan_attacks(clon_deffender,place_defender,true);
@@ -400,6 +408,11 @@ async function attack(attacker:Carta,place_attacker:number,place_defender:number
             logs.innerHTML+=`<ul>${attacker.name} pierde contra ${deffender.name}</ul>`
             first_attack[0]=place_defender;
             first_attack[1]=place_attacker;
+
+            resultado_battle[0]=first_defense_result;
+            resultado_battle[1]=defense_result;
+            resultado_battle[2]=first_attack_result;
+            resultado_battle[3]=attack_result;
             
             const clon_attacker= {
                 name: attacker.name,
@@ -420,31 +433,51 @@ async function attack(attacker:Carta,place_attacker:number,place_defender:number
         
     }
 
-    wsEvent.send(JSON.stringify({code: localStorage.getItem('code') as string, tablero: JSON.stringify(Object.fromEntries(mapa)), attack: first_attack, combo : combo_affected, turn: ++currentTurn }))
+    wsEvent.send(JSON.stringify({code: localStorage.getItem('code') as string, tablero: JSON.stringify(Object.fromEntries(mapa)), attack: first_attack, combo : combo_affected, res_battle: resultado_battle, turn: ++currentTurn }))
     
     
     
 }
+
 
 async function animationTakeOver(participans:number[]){
     const winner=mapa.get(participans[0]) as Carta;
     const loser=mapa.get(participans[1]) as Carta;
-    console.log(participans[1],loser)
     loser.team=winner.team;
-    console.log(loser);
-    mapa.set(participans[1],loser);
-    console.log(mapa)
+
     drawTablero(mapa);
+    await audioTakeOver.play();
 }
-async function animationBattle(participans:number[]){
+async function animationBattle(participans:number[],res:number[]){
     const winner=mapa.get(participans[0]) as Carta;
     const loser=mapa.get(participans[1]) as Carta;
+
+    tablero[participans[0]-4].innerHTML+=codeInfoBattle;
+    tablero[participans[1]-4].innerHTML+=codeInfoBattle;
+    let resultado=document.querySelectorAll('.resultado') as NodeListOf<HTMLSpanElement>;
+    let countdown=true;
+    let intervalo=(res[0]-res[1]>res[2]-res[3])? 2000/(res[0]-res[1]) : 2000/(res[2]-res[3]);
+
+    await audioBattle.play();
+    waitaS(2).then(() => {countdown=false;});
+
+    do{
+        if (res[0]>res[1]) res[0]--;
+        if (res[2]>res[3]) res[2]--;
+        await waitX(intervalo);
+        numberBattle(resultado[0],res[0]);
+        numberBattle(resultado[1],res[2]);
+
+    }while(countdown);
+
     loser.team=winner.team;
-    console.log(loser);
-    mapa.set(participans[1],loser);
-    console.log(mapa)
     drawTablero(mapa);
 
+}
+
+async function numberBattle(span:HTMLSpanElement,n:number){
+    span.children[0].setAttribute('src',`../src/assets/info/${Math.trunc(n/10)}.png`)
+    span.children[1].setAttribute('src',`../src/assets/info/${n%10}.png`)
 }
 async function animationCombo(participans:number[],winner:number){
     const winner_team=(mapa.get(winner) as Carta).team as string;
@@ -452,13 +485,12 @@ async function animationCombo(participans:number[],winner:number){
     for (let i=0; i<participans.length; i++){
         const carta=mapa.get(participans[i]) as Carta;
         carta.team=winner_team;
-        mapa.set(participans[i],carta);
         drawTablero(mapa);
         await audioTakeOver.play();
-        await waitaS();
+        await waitaS(2);
 
     }
-    console.log(winner_team);
+
 
     
 
@@ -481,4 +513,5 @@ async function coinAnimation(who : string){
 
 
 
-const waitaS= () => new Promise(resolve => setTimeout(resolve,2000));
+const waitaS= (s:number) => new Promise(resolve => setTimeout(resolve,s*1000));
+const waitX=(ms:number) => new Promise(resolve => setTimeout(resolve,ms));

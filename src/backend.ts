@@ -106,7 +106,7 @@ app.ws('/events', async (ws,req) =>{
             players.push(clientEvent.get(token));
         }
         players.forEach(player =>{
-            player.send(JSON.stringify({attack: attack, mapa: mensage.tablero, combo: combo, turn: mensage.turn}))
+            player.send(JSON.stringify({attack: attack, mapa: mensage.tablero, combo: combo, res_battle: mensage.res_battle, turn: mensage.turn}))
         })
     })
     ws.on('open', () =>{
