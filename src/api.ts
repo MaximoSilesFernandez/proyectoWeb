@@ -118,6 +118,17 @@ export async function createTablero(code:string,token:string){
 
 }
 
+export async function updateStats(token:string, result:string){
+    await fetch(`http://localhost:3000/updateStats`,{
+        method: 'POST',
+        headers:{
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({result : result})
+        
+    });
+}
 
 
 export async function getCarta(cartas:string[], team:string){
@@ -159,4 +170,18 @@ export async function determineRol(code:string, token:string){
 
     return await res.json();
 
+}
+
+export async function alreadyInMatch(token:string){
+    const res=await fetch('http://localhost:3000/alreadyInMatch',{
+        method: 'GET',
+        headers:{
+            "Content-Type":"application/json",
+            "Authorization": `Bearer ${token}`
+        }
+    });
+
+    
+
+    return await res.json();
 }

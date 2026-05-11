@@ -43,12 +43,25 @@ CREATE TABLE private.cartas(
     directions VARCHAR(255)
 );
 
+CREATE TABLE private.estadistica(
+    player_id INTEGER NOT NULL REFERENCES private.players(id),
+    wins INTEGER DEFAULT 0,
+    losses INTEGER DEFAULT 0,
+    PRIMARY KEY (player_id)
+);
 
-/*
-CREATE TABLE private.game_state(
-    lobby_code CHAR(5) PRIMARY KEY REFERENCES private.lobbies(code),
-    player1_hand VARCHAR(255) NOT NULL,
-    player2_hand VARCHAR(255) NOT NULL,
-    board VARCHAR(255) NOT NULL,
-    turn INTEGER NOT NULL
-)*/
+
+
+CREATE FUNCTION addStatsTriger() 
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO private.estadistica(player_id) VALUES (NEW.id);
+    RETURN NEW;
+END; $$ 
+LANGUAGE plpgsql;
+
+
+CREATE TRIGGER addStatsTriger
+AFTER INSERT ON private.players
+FOR EACH ROW 
+EXECUTE FUNCTION addStatsTriger();

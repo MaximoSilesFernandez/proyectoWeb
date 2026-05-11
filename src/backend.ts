@@ -26,18 +26,19 @@ let comienza: string;
 app.ws('/match', async (ws, req) => {
     const token=req.query.token as string
     const room=req.query.room as string
-    console.log(room)
+
     clients.set(token as string,ws); 
     if (!clientMatches.get(room)){
         
         clientMatches.set(room, [token])
+
     } else{
         const value=clientMatches.get(room) as any[];
         if (!value.includes(token)){
             value.push(token);
             clientMatches.set(room, value);
+
             if (clientMatches.get(room)?.length==2){
-                console.log("hay dos")
                 const players=clientMatches.get(room) as string[];
                 await createLobby(room,players[0] , players[1]);
 
@@ -49,10 +50,8 @@ app.ws('/match', async (ws, req) => {
                     player.send(JSON.stringify({msg:'matchBegin',first_turn: comienza}));
                 });
             }
-        } 
+        }
     }
-    console.log(clientMatches)
-    //console.log(clientMatches)
     ws.on('open', () =>{
 
     });
@@ -60,12 +59,22 @@ app.ws('/match', async (ws, req) => {
         const mensage=JSON.parse(msg);
         const tokens=clientMatches.get(mensage.code as string) as string[];
         const players=[] as any[];
+
+        
+
         for (const token of tokens){
             players.push(clients.get(token));
         }
-        if (mensage.msg==='getTablero'){
+        if (mensage.msg==='endMatch'){
+            for (const player of tokens){
+                clients.delete(player);
+            }
+            clientMatches.delete(mensage.code as string);
+            await deleteMatch(mensage.code as string);
+
+        } else if (mensage.msg==='getTablero'){
             const mapa=await getMap(mensage.code) as string;
-            if (mapa){
+            if (mapa && (clientMatches.get(room)?.length as number)>=2){
                 players.forEach(player  => {
                     player.send(JSON.stringify({mapa: mapa, msg:'sendTablero',newTurn:false}));
                 });
@@ -93,14 +102,12 @@ let clientEvent=new Map<String,any>();
 
 app.ws('/events', async (ws,req) =>{
     clientEvent.set(req.query.token as string,ws);
-    console.log('connected to wsEvent')
     ws.on('message', async (msg: string) =>{
         const mensage=JSON.parse(msg);
         const attack=mensage.attack as string[];
         const combo=mensage.combo as string[];
         
         const tokens=clientMatches.get(mensage.code as string) as string[];
-        console.log("First attack "+attack+" combo "+combo);
         const players=[] as any[];
         for (const token of tokens){
             players.push(clientEvent.get(token));
@@ -132,22 +139,36 @@ app.use(express.urlencoded());
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, code, cartas');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, code, cartas, rol');
     next();
 });
 app.listen(3000,() =>{
     console.log('Backend is running in 3000')
 });
 
+async function deleteMatch(code:string){
+
+    const client= await newClient();
+    await client.connect();
+    try{
+        await client.query('DELETE FROM private.lobbies WHERE code=$1',[code]);
+        await client.query('DELETE FROM private.tablero WHERE code=$1',[code]);
+    } catch (err){
+        console.log(err);
+    } finally{
+        client.end();
+    }
+
+}
+
 async function createLobby(code:string,host_token:string,opp_token:string){
-    console.log('creatinglobby')
+
     const decoded_host=await verifyTokenUser(host_token) as any;
     const decoded_opp=await verifyTokenUser(opp_token) as any;
     const client= await newClient();
     await client.connect();
     
-    console.log(decoded_host.id);
-    console.log(decoded_opp.id)
+
 
     try{
         await client.query('INSERT INTO private.lobbies(code,host_id,opponent_id,map) VALUES ($1,$2,$3,$4);',[code,parseInt(decoded_host.id),parseInt(decoded_opp.id),code])
@@ -177,7 +198,7 @@ async function updateMap(code:string,new_mapa:string[]){
 
 
 async function getMap(code:string){
-    console.log("gettingMap");
+
     const client= await newClient();
     let mapa="";
     await client.connect();
@@ -248,7 +269,7 @@ app.get('/getCarta', async (req,res) =>{
 });
 
 app.post('/newMatch', async (req, res) =>{
-    console.log("creandoTabla");
+
     const code=req.body.code as string;
     const decoded= await verifyTokenUser((req.headers.authorization as string).substring(7)) as any;
     if (!decoded) return; 
@@ -292,6 +313,44 @@ app.post('/addOpponent', async (req,res) =>{
     }
 });
 
+app.post('/updateStats', async (req,res) =>{
+    const decoded= await verifyTokenUser((req.headers.authorization as string).substring(7)) as any;
+    const client=await newClient();
+    await client.connect();
+    try{
+        if (req.body.result=='win'){
+            await client.query('UPDATE private.estadistica SET wins=wins+1 WHERE player_id=$1',[decoded.id]);
+        } else{
+            await client.query('UPDATE private.estadistica SET losses=losses+1 WHERE player_id=$1',[decoded.id])
+        }
+        res.send();
+    } catch(err){
+        console.log(err);
+    } finally{
+        client.end();
+    }
+
+});
+
+app.get('/alreadyInMatch', async (req,res) =>{
+    const decoded=  await verifyTokenUser((req.headers.authorization as string).substring(7)) as any;
+
+    const client= await newClient();
+
+    await client.connect();
+
+    try{
+        const isHost=(await client.query(`SELECT code FROM private.lobbies where host_id=$1`,[decoded.id]) as any).rows[0] as any;
+        const isOpp=(await client.query(`SELECT code FROM private.lobbies where opponent_id=$1`,[decoded.id]) as any).rows[0] as any;
+
+        res.json({code :(isHost)? isHost : isOpp});
+    } catch (err){
+        console.log(err)
+        res.json();
+    } finally{
+        client.end();
+    }
+})
 
 app.get( '/verifyUser' , async (req,res) =>{
     
@@ -301,7 +360,6 @@ app.get( '/verifyUser' , async (req,res) =>{
 });
 
 app.post( '/login' , async (req,res) =>{
-    console.log("Login doing")
 
     const client= await newClient();
     await client.connect();
@@ -317,7 +375,7 @@ app.post( '/login' , async (req,res) =>{
 
 
 app.post( '/signup' , async (req,res) =>{
-    console.log("Signup doing")
+
 
     const client= await newClient();
     client.connect();

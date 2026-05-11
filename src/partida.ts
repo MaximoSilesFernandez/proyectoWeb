@@ -1,4 +1,4 @@
-import { getCarta, getTablero, updateTablero, getWebSocket, getWebSocketEvent, verifyToken, createTablero} from "./api.ts";
+import { getCarta, getTablero, updateTablero,  updateStats, getWebSocket, getWebSocketEvent, verifyToken, createTablero} from "./api.ts";
 import type {Carta} from "./api.ts";
 const tablero= document.querySelector("main")?.querySelectorAll("div>div") as NodeListOf<HTMLDivElement>;
 const logs=document.querySelector('#logs') as HTMLDivElement;
@@ -13,7 +13,6 @@ const codeInfoBattle=`<span class='resultado'><img src=''><img src=''></span>`
 
 const carts= ['Bomb','Fang','Flan','Goblin','Ironite','Lizzard','Sahagin','Skeleton','Zaghnol','Zombie'] as string[];
 
-
 const audioTakeOver=new Audio(`../src/assets/sounds/snd_bell.wav`);
 const audioBattle=new Audio(`../src/assets/sounds/snd_badexplosion.wav`)
 audioTakeOver.volume=0.2;
@@ -23,14 +22,14 @@ let yourTurn=false;
 
 if (localStorage.getItem('currentTurn')) currentTurn=Number(localStorage.getItem('currentTurn'));
 
-yourTurn=(localStorage.getItem('rol')==='host')? (currentTurn%2===1)? true : false : (currentTurn%2===0)? true : false;
-
+yourTurn=(localStorage.getItem('firstTurn')==='true')? (currentTurn%2===1)? true : false : (currentTurn%2===0)? true : false;
+console.log (yourTurn);
 if (localStorage.getItem('baraja')) await getHand();
 else await createHand();
 
-(document.querySelector('header>div') as HTMLDivElement).innerHTML=`Turno ${currentTurn}`;
 
 
+updateInfo();
 
 const ws=await getWebSocket(localStorage.getItem('code') as string, ((await verifyToken(localStorage.getItem('token') as any) as any)?.name),localStorage.getItem('token') as string);
 ws.addEventListener('message', async (mes)=>{
@@ -50,9 +49,13 @@ ws.addEventListener('message', async (mes)=>{
         if (msg.newTurn){
             await updateTurn(msg.newTurn);
         }
+        if (currentTurn>=11){
+            console.log("Fin")
+            endMatch();
+        }
         await everyDiv();
         
-        console.log(yourTurn);
+
     } else if(msg.msg==='matchBegin'){
         ws.send(JSON.stringify({code: localStorage.getItem('code') as string, msg: 'getTablero'}));
         await coinAnimation(msg.first_turn);
@@ -73,7 +76,7 @@ const wsEvent= await getWebSocketEvent(localStorage.getItem('token') as string);
 async function updateTurn(newTurn:number){
     currentTurn=newTurn;
     localStorage.setItem('currentTurn',String(currentTurn));
-    yourTurn=(localStorage.getItem('rol')==='host')? (currentTurn%2===1)? true : false : (currentTurn%2===0)? true : false;
+    yourTurn=(localStorage.getItem('firstTurn')==='true')? (currentTurn%2===1)? true : false : (currentTurn%2===0)? true : false;
 }
 
 
@@ -81,7 +84,7 @@ wsEvent.addEventListener('message', async (mes) =>{
 
     const msg=JSON.parse(mes.data);
 
-    console.log(msg.mapa);
+
     const map=JSON.parse(msg.mapa) as JSON;
         
     
@@ -89,8 +92,8 @@ wsEvent.addEventListener('message', async (mes) =>{
         
         mapa.set(i,Object.values(map)[i-1]) 
     }
-    drawTablero(mapa);
     await updateTurn(msg.turn);
+    drawTablero(mapa);
     
     await waitaS(2);
     
@@ -208,6 +211,7 @@ function drawTablero(mapa: Map<number,Carta>){
 
         
     }
+    updateInfo();
 }
 
 
@@ -249,7 +253,7 @@ async function scan_attacks(carta: Carta,position:number, combo:boolean = false)
     const borde_izq=[1,5,9,13] as number[];
     const borde_der=[4,8,12,16] as number[];
     const pos=carta.directions.split("-") as String[];
-    console.log(carta.name+" escanea de equipo "+carta.team)
+
 
     let pos_deff=[] as number[];
     let contraattacks= [] as String[];
@@ -321,7 +325,7 @@ async function scan_attacks(carta: Carta,position:number, combo:boolean = false)
 
         if (contraataque!==''){
             if (combo){
-                console.log(carta_enemiga.name+" "+carta_enemiga.team)
+
                 combo_affected.push(place_enemigo);
                 logs.innerHTML+=`<ul>${carta.name} gana a ${carta_enemiga.name} por combo</ul>`;
 
@@ -368,7 +372,7 @@ async function election_attack(attacker:Carta,place_attacker:number,listDeffende
 
 async function attack(attacker:Carta,place_attacker:number,place_defender:number,deffender:Carta,contrattack:String){
     logs.innerHTML+=`<ul>${attacker.name} ataca a ${deffender.name}</ul>`;
-    console.log(`${attacker.name} ataca a ${deffender.name}`)
+
     const opp_attk=deffender.directions.split('-') as String[];
     
     
@@ -421,7 +425,7 @@ async function attack(attacker:Carta,place_attacker:number,place_defender:number
             }
 
 
-            console.log(mapa)
+
             await scan_attacks(clon_attacker,place_attacker,true);
             
         } 
@@ -460,7 +464,7 @@ async function animationBattle(participans:number[],res:number[]){
 
     await audioBattle.play();
     waitaS(2).then(() => {countdown=false;});
-    console.log(res[0],res[1],res[2],res[3]);
+
     do{
         if (res[0]>res[1]) res[0]--;
         if (res[2]>res[3]) res[2]--;
@@ -487,12 +491,11 @@ async function animationCombo(participans:number[],winner:number){
     
     for (let i=0; i<participans.length; i++){
         const carta=mapa.get(participans[i]) as Carta;
-        carta.team=winner_team;
-        drawTablero(mapa);
-        await audioTakeOver.play();
-        await waitaS(2);
-
+        carta.team=winner_team; 
     }
+    drawTablero(mapa);
+    await audioTakeOver.play();
+    await waitaS(2);
 
 
     
@@ -511,10 +514,64 @@ async function coinAnimation(who : string){
         console.log('Supuesta animacion pro-opp')
     }
     const interpole=(localStorage.getItem('rol')==who)? 'true' : 'false';
-    localStorage.setItem('yourTurn',interpole);
+    localStorage.setItem('firstTurn',interpole);
+    await updateTurn(1);
 }
+
+async function countCarts(team:string){
+    let i=0;
+    mapa.forEach(carta => {
+        if (carta.team==team) i++;    
+    });
+    return i;
+}
+
+async function updateInfo(){
+    (document.querySelector('header>div') as HTMLDivElement).innerHTML=`Turno ${currentTurn} | Cartas Azules=${await countCarts('ally')} | Cartas Rojas=${await countCarts('opp')}`;
+
+
+}
+
+async function endMatch(){
+    const carts_host= await countCarts('ally');
+    const carts_opp= await countCarts('opp');
+    if (carts_host>carts_opp){
+        if (localStorage.getItem('rol')==='host'){
+            await updateStats(localStorage.getItem('token') as string,'win');
+            alert('Winner');
+        } 
+        else if (localStorage.getItem('rol')==='opponent'){ 
+            await updateStats(localStorage.getItem('token') as string,'loss');
+            alert('Loser');
+        }
+        else alert('The Blue Team has won');
+    } else if(carts_host<carts_opp){
+        if (localStorage.getItem('rol')==='host'){
+            await updateStats(localStorage.getItem('token') as string,'loss');
+            alert('Loser');
+        } 
+        else if (localStorage.getItem('rol')==='opponent'){ 
+            await updateStats(localStorage.getItem('token') as string,'win');
+            alert('Winner');
+        }
+        else alert('The Red Team has won');
+        
+    } else{
+        alert('Draw');
+    }
+    if (localStorage.getItem('rol')==='host') ws.send(JSON.stringify({code: localStorage.getItem('code') as string, msg: 'endMatch' }))
+
+    localStorage.removeItem('code');
+    localStorage.removeItem('currentTurn');
+    localStorage.removeItem('firstTurn');
+    localStorage.removeItem('baraja');
+    window.location.href="../index.html";        
+}
+
 
 
 
 const waitaS= (s:number) => new Promise(resolve => setTimeout(resolve,s*1000));
 const waitX=(ms:number) => new Promise(resolve => setTimeout(resolve,ms));
+
+

@@ -1,4 +1,4 @@
-import {verifyCode,signup,login,determineRol} from "./api.ts";
+import {verifyCode,signup,login,determineRol, alreadyInMatch} from "./api.ts";
 
 const createLobyButton = document.getElementById("createLoby") as HTMLButtonElement;
 const joinLobyButton = document.getElementById("joinLoby") as HTMLButtonElement;
@@ -47,34 +47,44 @@ signUpButton.addEventListener("click", async ()=>{
 });
 
 
-createLobyButton.addEventListener("click",(event)=>{
-    let code="";
-    for(let i=0; i<5; i++){
-        code+=String.fromCharCode(Math.random()*26+65);
+createLobyButton.addEventListener("click", async (event)=>{
+    if (!((await alreadyInMatch(localStorage.getItem('token') as string)))){
+        let code="";
+        for(let i=0; i<5; i++){
+            code+=String.fromCharCode(Math.random()*26+65);
+        }
+        console.log(code);
+        localStorage.setItem("code",code);
+        localStorage.setItem("rol",'host');
+        window.location.replace("/partida/?code="+code)
+    } else{
+        alert("Ya estas en una partida ");
     }
-    console.log(code);
-    localStorage.setItem("code",code);
-    localStorage.setItem("rol",'host');
-    window.location.replace("/partida/?code="+code)
     
 
 });
 
-joinLobyButton.addEventListener("click",(event)=>{
+joinLobyButton.addEventListener("click", async (event) =>{
+
     let div=(event.currentTarget as HTMLButtonElement).parentElement as HTMLDivElement;
     div.innerHTML=`<label for="code">Código:</label>
-                   <input type="text" id="code" name="code"></input>
-                   <button id="join">Join</button>`;
+                <input type="text" id="code" name="code"></input>
+                <button id="join">Join</button>`;
     document.getElementById("join")?.addEventListener("click",async (event)=>{
         const code=(document.getElementById("code") as HTMLInputElement)?.value as string
         const existe=await verifyCode(code);
         if ( existe) {
-            localStorage.setItem("code", code )
-            const role= await determineRol(code,localStorage.getItem('token') as string);
-            localStorage.setItem("rol",role);
-            window.location.replace("/partida/?code="+code);
+            if (!((await alreadyInMatch(localStorage.getItem('token') as string)))){
+                localStorage.setItem("code", code )
+                const role= await determineRol(code,localStorage.getItem('token') as string);
+                localStorage.setItem("rol",role);
+                window.location.replace("/partida/?code="+code);
+            } else{
+            alert("Ya estas en una partida ");
+            }
         } else {
             ((event.target as HTMLButtonElement).parentElement as HTMLDivElement).innerHTML+=`<p style="color:red">Código incorrecto</p>`;
         }
-    });
+    }); 
 });
+
