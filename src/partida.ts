@@ -94,7 +94,7 @@ wsEvent.addEventListener('message', async (mes) =>{
     
     await waitaS(2);
     
-    if (msg.attack.length==2){
+    if (msg.attack.length==2 && msg.res_battle.length==0){
         await animationTakeOver(msg.attack);
 
     } else{
@@ -401,7 +401,6 @@ async function attack(attacker:Carta,place_attacker:number,place_defender:number
             resultado_battle[2]=first_defense_result;
             resultado_battle[3]=defense_result;
 
-            console.log(mapa)
             await scan_attacks(clon_deffender,place_defender,true);
             
         } else if (attack_result<defense_result){
@@ -451,33 +450,37 @@ async function animationTakeOver(participans:number[]){
 async function animationBattle(participans:number[],res:number[]){
     const winner=mapa.get(participans[0]) as Carta;
     const loser=mapa.get(participans[1]) as Carta;
-
-    tablero[participans[0]-4].innerHTML+=codeInfoBattle;
-    tablero[participans[1]-4].innerHTML+=codeInfoBattle;
+    let orden=true;
+    if (participans[0]>participans[1]) orden=false;
+    tablero[participans[0]+4].innerHTML+=codeInfoBattle;
+    tablero[participans[1]+4].innerHTML+=codeInfoBattle;
     let resultado=document.querySelectorAll('.resultado') as NodeListOf<HTMLSpanElement>;
     let countdown=true;
     let intervalo=(res[0]-res[1]>res[2]-res[3])? 2000/(res[0]-res[1]) : 2000/(res[2]-res[3]);
 
     await audioBattle.play();
     waitaS(2).then(() => {countdown=false;});
-
+    console.log(res[0],res[1],res[2],res[3]);
     do{
         if (res[0]>res[1]) res[0]--;
         if (res[2]>res[3]) res[2]--;
         await waitX(intervalo);
-        numberBattle(resultado[0],res[0]);
-        numberBattle(resultado[1],res[2]);
+        numberBattle(resultado[0],(orden)?res[0] : res[2]);
+        numberBattle(resultado[1],(orden)? res[2] : res[0]);
 
     }while(countdown);
-
+    await waitaS(1);
+    document.querySelectorAll('.resultado')?.forEach(res => res.remove());
     loser.team=winner.team;
+    await audioTakeOver.play();
     drawTablero(mapa);
 
 }
 
 async function numberBattle(span:HTMLSpanElement,n:number){
+    if (n<0) n=0;
     span.children[0].setAttribute('src',`../src/assets/info/${Math.trunc(n/10)}.png`)
-    span.children[1].setAttribute('src',`../src/assets/info/${n%10}.png`)
+    span.children[1].setAttribute('src',`../src/assets/info/${Math.trunc(n%10)}.png`)
 }
 async function animationCombo(participans:number[],winner:number){
     const winner_team=(mapa.get(winner) as Carta).team as string;
