@@ -37,18 +37,19 @@ app.ws('/match', async (ws, req) => {
         if (!value.includes(token)){
             value.push(token);
             clientMatches.set(room, value);
-
+            console.log(clientMatches)
             if (clientMatches.get(room)?.length==2){
                 const players=clientMatches.get(room) as string[];
-                await createLobby(room,players[0] , players[1]);
+                await createLobby(room,players[0] , players[1]).then( () =>{
+                    const two_players=[] as any[];
+                    for (const player of players){
+                        two_players.push(clients.get(player));
+                    }
+                    two_players.forEach( (player) =>{
+                        player.send(JSON.stringify({msg:'matchBegin',first_turn: comienza}));
+                    });
+                }).catch(err =>{});
 
-                const two_players=[] as any[];
-                for (const player of players){
-                    two_players.push(clients.get(player));
-                }
-                two_players.forEach( (player) =>{
-                    player.send(JSON.stringify({msg:'matchBegin',first_turn: comienza}));
-                });
             }
         }
     }
@@ -61,7 +62,7 @@ app.ws('/match', async (ws, req) => {
         const players=[] as any[];
 
         
-
+        if (!tokens) return;
         for (const token of tokens){
             players.push(clients.get(token));
         }
@@ -74,9 +75,11 @@ app.ws('/match', async (ws, req) => {
 
         } else if (mensage.msg==='getTablero'){
             const mapa=await getMap(mensage.code) as string;
-            if (mapa && (clientMatches.get(room)?.length as number)>=2){
+            if (mapa /*&& (clientMatches.get(room)?.length as number)>=2*/){
+                const turno=( await getTurn(mensage.code as string));
+
                 players.forEach(player  => {
-                    player.send(JSON.stringify({mapa: mapa, msg:'sendTablero',newTurn:false}));
+                    player.send(JSON.stringify({mapa: mapa, msg:'sendTablero', newTurn: turno.turn}));
                 });
             } else{
                 players.forEach(player  => {
@@ -84,11 +87,19 @@ app.ws('/match', async (ws, req) => {
                 });
             }
         } else if(mensage.msg==='updateTablero'){
-            await updateMap(mensage.code,mensage.tablero);
+            await updateMap(mensage.code,mensage.tablero,mensage.newTurn);
+            console.log(mensage.newTurn);
             const mapa=await getMap(mensage.code) as string;
             players.forEach(player  => {
                     player.send(JSON.stringify({mapa: mapa, msg:'sendTablero', newTurn : mensage.newTurn}));
             });
+        } else if (mensage.msg==='getHand'){
+            const hand=await getHand(mensage.code,mensage.rol); 
+            ws.send(JSON.stringify({hand: hand, msg : 'sendHand'}))
+        } else if (mensage.msg==='updateHand'){
+            await updateHand(mensage.code,mensage.rol, mensage.hand); 
+            const hand=await getHand(mensage.code,mensage.rol); 
+            ws.send(JSON.stringify({hand: hand, msg : 'sendHand'}));
         }
 
     })
@@ -96,6 +107,36 @@ app.ws('/match', async (ws, req) => {
     
 });
 
+async function getHand(code:string,rol:string) {
+
+    const client= await newClient();
+    await client.connect();
+    try{
+        return (await client.query(`SELECT private.lobbies.${rol}_hand FROM private.lobbies WHERE code=$1`,[code]) as any).rows[0];
+    } catch (err){
+        console.log(err)
+    } finally{
+        client.end();
+    }
+}
+
+async function updateHand(code:string,rol:string,newHand:string){
+
+
+    const client= await newClient();
+    await client.connect();
+    try{
+
+        await client.query(`UPDATE private.lobbies SET ${rol}_hand=$1 WHERE code=$2`,[newHand,code]);
+            
+        
+    } catch (err){
+        console.log(err)
+    } finally{
+        client.end();
+
+    }
+}
 
 
 let clientEvent=new Map<String,any>();
@@ -158,37 +199,51 @@ async function deleteMatch(code:string){
     } finally{
         client.end();
     }
-
+    
 }
 
 async function createLobby(code:string,host_token:string,opp_token:string){
-
+    
     const decoded_host=await verifyTokenUser(host_token) as any;
     const decoded_opp=await verifyTokenUser(opp_token) as any;
     const client= await newClient();
     await client.connect();
     
-
+    
 
     try{
         await client.query('INSERT INTO private.lobbies(code,host_id,opponent_id,map) VALUES ($1,$2,$3,$4);',[code,parseInt(decoded_host.id),parseInt(decoded_opp.id),code])
         
     } catch (err){
         console.log(err);
+        throw err;
     } finally{
         client.end();
     }
 
 }
 
+async function getTurn(code: string){
+    const client= await newClient();
+    await client.connect();
+    try{
+        return (await client.query(`SELECT private.lobbies.turn FROM private.lobbies WHERE private.lobbies.code=$1 `,[code]) as any).rows[0]
+    } catch (err){
+        console.log(err);
+    } finally{
+        client.end();
+    }
+}
 
-async function updateMap(code:string,new_mapa:string[]){
+
+async function updateMap(code:string,new_mapa:string[], turn:number){
     const client= await newClient();
     await client.connect();
     try{
         for (let i = 1; i < 17; i++) {
             await client.query(`UPDATE private.tablero SET c_${i}=$1 WHERE code=$2`,[new_mapa[i-1],code])
         }
+        await client.query(`UPDATE private.lobbies SET turn=$1 WHERE code=$2`,[turn,code])
     } catch(err){
         console.log(err)
     } finally{
@@ -221,7 +276,7 @@ async function getMap(code:string){
 app.get('/determineRol', async (req , res)=>{
     const code=req.headers.code as string;
     const decoded= await verifyTokenUser((req.headers.authorization as string).substring(7)) as any;
-
+    
     const client=await newClient();
     await client.connect();
     try{
@@ -240,7 +295,7 @@ app.get('/determineRol', async (req , res)=>{
         client.end();
     }
 
-
+    
 });
 
 app.get('/getCarta', async (req,res) =>{
@@ -267,6 +322,8 @@ app.get('/getCarta', async (req,res) =>{
         client.end();
     }
 });
+
+
 
 app.post('/newMatch', async (req, res) =>{
 
@@ -342,8 +399,8 @@ app.get('/alreadyInMatch', async (req,res) =>{
     try{
         const isHost=(await client.query(`SELECT code FROM private.lobbies where host_id=$1`,[decoded.id]) as any).rows[0] as any;
         const isOpp=(await client.query(`SELECT code FROM private.lobbies where opponent_id=$1`,[decoded.id]) as any).rows[0] as any;
-
-        res.json({code :(isHost)? isHost : isOpp});
+        
+        res.json({code :(isHost)? isHost?.code : isOpp?.code, rol : (isHost)? 'host' : 'opponent'});
     } catch (err){
         console.log(err)
         res.json();

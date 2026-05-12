@@ -48,7 +48,9 @@ signUpButton.addEventListener("click", async ()=>{
 
 
 createLobyButton.addEventListener("click", async (event)=>{
-    if (!((await alreadyInMatch(localStorage.getItem('token') as string)))){
+    const alreadyInMatchCode=await alreadyInMatch(localStorage.getItem('token') as string);
+    console.log(alreadyInMatchCode);
+    if (!alreadyInMatchCode.code){
         let code="";
         for(let i=0; i<5; i++){
             code+=String.fromCharCode(Math.random()*26+65);
@@ -58,7 +60,12 @@ createLobyButton.addEventListener("click", async (event)=>{
         localStorage.setItem("rol",'host');
         window.location.replace("/partida/?code="+code)
     } else{
-        alert("Ya estas en una partida ");
+        (document.querySelector('body') as HTMLBodyElement).innerHTML=`<button id='directJoin'>Join Match</button>`;
+        document.getElementById('directJoin')?.addEventListener('click', async (event)=>{
+            localStorage.setItem("code",alreadyInMatchCode.code);
+            localStorage.setItem("rol",alreadyInMatchCode.rol);
+            window.location.replace("/partida/?code="+alreadyInMatchCode.code);
+        });
     }
     
 
@@ -73,14 +80,20 @@ joinLobyButton.addEventListener("click", async (event) =>{
     document.getElementById("join")?.addEventListener("click",async (event)=>{
         const code=(document.getElementById("code") as HTMLInputElement)?.value as string
         const existe=await verifyCode(code);
-        if ( existe) {
-            if (!((await alreadyInMatch(localStorage.getItem('token') as string)))){
+        if (existe) {
+            const alreadyInMatchCode=await alreadyInMatch(localStorage.getItem('token') as string);
+            if (!alreadyInMatchCode.code){
                 localStorage.setItem("code", code )
                 const role= await determineRol(code,localStorage.getItem('token') as string);
                 localStorage.setItem("rol",role);
                 window.location.replace("/partida/?code="+code);
             } else{
-            alert("Ya estas en una partida ");
+                (document.querySelector('body') as HTMLBodyElement).innerHTML=`<button id='directJoin'>Join Match</button>`;
+                document.getElementById('directJoin')?.addEventListener('click', async (event)=>{
+                    localStorage.setItem("code",alreadyInMatchCode.code);
+                    localStorage.setItem("rol",alreadyInMatchCode.rol);
+                    window.location.replace("/partida/?code="+alreadyInMatchCode.code);
+                });
             }
         } else {
             ((event.target as HTMLButtonElement).parentElement as HTMLDivElement).innerHTML+=`<p style="color:red">Código incorrecto</p>`;

@@ -17,15 +17,19 @@ const audioTakeOver=new Audio(`../src/assets/sounds/snd_bell.wav`);
 const audioBattle=new Audio(`../src/assets/sounds/snd_badexplosion.wav`)
 audioTakeOver.volume=0.2;
 audioBattle.volume=0.2;
-let currentTurn=1;
+let currentTurn=0;
 let yourTurn=false;
 
-if (localStorage.getItem('currentTurn')) currentTurn=Number(localStorage.getItem('currentTurn'));
+console.log(localStorage.getItem('rol'))
 
-yourTurn=(localStorage.getItem('firstTurn')==='true')? (currentTurn%2===1)? true : false : (currentTurn%2===0)? true : false;
-console.log (yourTurn);
-if (localStorage.getItem('baraja')) await getHand();
-else await createHand();
+if (localStorage.getItem('rol')!='spectator'){
+
+    if (localStorage.getItem('currentTurn')) currentTurn=Number(localStorage.getItem('currentTurn'));
+    
+    yourTurn=(localStorage.getItem('firstTurn')==='true')? (currentTurn%2===1)? true : false : (currentTurn%2===0)? true : false;
+    console.log (yourTurn);
+}
+
 
 
 
@@ -54,22 +58,39 @@ ws.addEventListener('message', async (mes)=>{
             endMatch();
         }
         await everyDiv();
+        if (localStorage.getItem('rol')!='spectator'){
+            ws.send(JSON.stringify({code: localStorage.getItem('code') ,rol : localStorage.getItem('rol'), msg : 'getHand'}));
+        }
         
 
     } else if(msg.msg==='matchBegin'){
         ws.send(JSON.stringify({code: localStorage.getItem('code') as string, msg: 'getTablero'}));
+        await createHand();
         await coinAnimation(msg.first_turn);
         
+    } else if (msg.msg==='sendHand'){
+        const hand=Object.values(msg.hand)[0] as string;
+
+
+        localStorage.setItem('baraja',hand.replaceAll(/[{}"]/g,""));
+        
+        getHand();
     }
+    console.log(msg)
+    updateInfo()
 });
 
 ws.addEventListener('open',() =>{
     ws.send(JSON.stringify({code: localStorage.getItem('code') as string, msg: 'getTablero'}));
 
+    
     //ws.send(localStorage.getItem('code') as string);
 });
 
+
+
 ws.OPEN;
+
 
 const wsEvent= await getWebSocketEvent(localStorage.getItem('token') as string);
 
@@ -111,7 +132,8 @@ wsEvent.addEventListener('message', async (mes) =>{
     first_attack=[];
     combo_affected=[];
     resultado_battle=[];
-    ws.send(JSON.stringify({code: localStorage.getItem('code') as string, tablero: JSON.stringify(Object.fromEntries(mapa)).split(/(?<=},)/), msg: 'updateTablero'}))
+    ws.send(JSON.stringify({code: localStorage.getItem('code') as string, tablero: JSON.stringify(Object.fromEntries(mapa)).split(/(?<=},)/), msg: 'updateTablero', newTurn : currentTurn}))
+    updateInfo()
 });
 
 wsEvent.OPEN;
@@ -122,17 +144,18 @@ async function createHand(){
         hand.push(carts[Math.trunc(Math.random()*10)]);
     }
     localStorage.setItem('baraja',hand.join(','));
-    getHand()
+    ws.send(JSON.stringify({ msg: 'updateHand', code: localStorage.getItem('code'), hand : hand, rol: localStorage.getItem('rol')}))
+
 }
 
 
 
 async function getHand() {
     const team=(localStorage.getItem('rol')==='host')? 'ally' : 'opp';
-
+    
 
     baraja=await getCarta(localStorage.getItem('baraja')?.split(",") as string[],team) as Carta[];
-
+    await drawTablero(mapa);
 }
 
 
@@ -225,9 +248,10 @@ async function placement(carta: Carta){
     let name_baraja=localStorage.getItem('baraja') as string;
 
     name_baraja=name_baraja.replace(baraja[place[0]+4].name,'');
-    localStorage.setItem('baraja',name_baraja)
+
     drawTablero(mapa);
-    getHand();
+    ws.send(JSON.stringify({ msg: 'updateHand', code: localStorage.getItem('code'), hand : name_baraja, rol: localStorage.getItem('rol')}))
+
 }
 
 
@@ -449,7 +473,7 @@ async function animationTakeOver(participans:number[]){
     loser.team=winner.team;
 
     drawTablero(mapa);
-    await audioTakeOver.play();
+    await audioTakeOver.play().catch((err) =>{});
 }
 async function animationBattle(participans:number[],res:number[]){
     const winner=mapa.get(participans[0]) as Carta;
@@ -462,7 +486,7 @@ async function animationBattle(participans:number[],res:number[]){
     let countdown=true;
     let intervalo=(res[0]-res[1]>res[2]-res[3])? 2000/(res[0]-res[1]) : 2000/(res[2]-res[3]);
 
-    await audioBattle.play();
+    await audioBattle.play().catch((err) =>{});
     waitaS(2).then(() => {countdown=false;});
 
     do{
@@ -476,7 +500,7 @@ async function animationBattle(participans:number[],res:number[]){
     await waitaS(1);
     document.querySelectorAll('.resultado')?.forEach(res => res.remove());
     loser.team=winner.team;
-    await audioTakeOver.play();
+    await audioTakeOver.play().catch((err) =>{});
     drawTablero(mapa);
 
 }
@@ -494,7 +518,7 @@ async function animationCombo(participans:number[],winner:number){
         carta.team=winner_team; 
     }
     drawTablero(mapa);
-    await audioTakeOver.play();
+    await audioTakeOver.play().catch((err) =>{});
     await waitaS(2);
 
 

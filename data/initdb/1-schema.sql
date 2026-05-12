@@ -32,9 +32,14 @@ CREATE TABLE private.tablero(
 CREATE TABLE private.lobbies(
     code CHAR(5) PRIMARY KEY,
     host_id INTEGER NOT NULL REFERENCES private.players(id) UNIQUE,
+    host_hand VARCHAR(255),
     opponent_id INTEGER REFERENCES private.players(id) UNIQUE,
+    opponent_hand VARCHAR(255),
+    turn INTEGER DEFAULT 1,
     map CHAR(5) REFERENCES private.tablero(code)
 );
+
+
 
 
 CREATE TABLE private.cartas(
