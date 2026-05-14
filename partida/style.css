@@ -1,4 +1,8 @@
-
+body{
+    background-image:url(../src/assets/fondo_total.png);
+    background-repeat: no-repeat;
+    background-size: cover;
+}
 
 header{
     background-color: aqua ;
@@ -12,6 +16,32 @@ main{
     flex-wrap:wrap;
     
 }
+
+#score{
+    background-image: url(../src/assets/score/score.png);
+    width: 86px;
+    height:62px;
+    background-repeat: no-repeat;
+    --background-size: cover;
+    background-position: center;
+    display: flex;
+    justify-content: space-between;
+    >img{
+        width: 36px;
+        height: 33px;
+
+    }
+    :first-child{
+        --background-color:red;
+    }
+    :last-child{
+        --background-color: green;
+        position: relative;
+        top:30px
+    }
+}
+
+
 #your_hand, #opp_hand{
     background-color: lightblue;
     display:flex;
@@ -27,6 +57,7 @@ main{
         
     }
 }
+
 
 #tablero{
     --background-color: lightgray;
@@ -61,4 +92,14 @@ main{
     left:17%;
 }
 
+.resultado{
+    display: flex;
+    position: relative;
 
+    top:20%;
+    left: 30%;
+    >img{
+       width: 16px;
+       height: 24px; 
+    }
+}

@@ -2,7 +2,7 @@ import { getCarta, getTablero, updateTablero,  updateStats, getWebSocket, getWeb
 import type {Carta} from "./api.ts";
 const tablero= document.querySelector("main")?.querySelectorAll("div>div") as NodeListOf<HTMLDivElement>;
 const logs=document.querySelector('#logs') as HTMLDivElement;
-
+const score=document.querySelector('#score') as HTMLDivElement;
 
 let mapa= new Map<number,Carta>();
 let baraja= [] as Carta[];
@@ -507,8 +507,8 @@ async function animationBattle(participans:number[],res:number[]){
 
 async function numberBattle(span:HTMLSpanElement,n:number){
     if (n<0) n=0;
-    span.children[0].setAttribute('src',`../src/assets/info/${Math.trunc(n/10)}.png`)
-    span.children[1].setAttribute('src',`../src/assets/info/${Math.trunc(n%10)}.png`)
+    span.children[0].setAttribute('src',`../src/assets/battle/${Math.trunc(n/10)}.png`)
+    span.children[1].setAttribute('src',`../src/assets/battle/${Math.trunc(n%10)}.png`)
 }
 async function animationCombo(participans:number[],winner:number){
     const winner_team=(mapa.get(winner) as Carta).team as string;
@@ -551,8 +551,10 @@ async function countCarts(team:string){
 }
 
 async function updateInfo(){
+    console.log(`../src/assets/score/${await countCarts('ally')}_host.png`);
     (document.querySelector('header>div') as HTMLDivElement).innerHTML=`Turno ${currentTurn} | Cartas Azules=${await countCarts('ally')} | Cartas Rojas=${await countCarts('opp')}`;
-
+    score.children[0].setAttribute('src',`../src/assets/score/${await countCarts('ally')}_host.png`);
+    score.children[1].setAttribute('src',`../src/assets/score/${await countCarts('opp')}_opp.png`);
 
 }
 
