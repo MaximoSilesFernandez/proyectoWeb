@@ -118,14 +118,14 @@ export async function createTablero(code:string,token:string){
 
 }
 
-export async function updateStats(token:string, result:string){
+export async function updateStats(token:string, result:string, code:string){
     await fetch(`http://localhost:3000/updateStats`,{
         method: 'POST',
         headers:{
             "Content-Type": "application/json",
             "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({result : result})
+        body: JSON.stringify({result : result, code : code})
         
     });
 }

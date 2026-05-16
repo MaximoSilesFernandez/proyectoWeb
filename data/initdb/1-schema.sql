@@ -51,6 +51,7 @@ CREATE TABLE private.cartas(
 CREATE TABLE private.estadistica(
     player_id INTEGER NOT NULL REFERENCES private.players(id),
     wins INTEGER DEFAULT 0,
+    draws INTEGER DEFAULT 0,
     losses INTEGER DEFAULT 0,
     PRIMARY KEY (player_id)
 );

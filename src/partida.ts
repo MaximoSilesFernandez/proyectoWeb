@@ -9,7 +9,7 @@ let baraja= [] as Carta[];
 let place= [] as number[];
 
 
-const codeInfoBattle=`<span class='resultado'><img src=''><img src=''></span>`
+const codeInfoBattle=`<span class='resultado'><img src='../src/assets/battle/0.png'><img src='../src/assets/battle/0.png'></span>`
 
 const carts= ['Bomb','Fang','Flan','Goblin','Ironite','Lizzard','Sahagin','Skeleton','Zaghnol','Zombie'] as string[];
 
@@ -492,9 +492,9 @@ async function animationBattle(participans:number[],res:number[]){
     do{
         if (res[0]>res[1]) res[0]--;
         if (res[2]>res[3]) res[2]--;
-        await waitX(intervalo);
         numberBattle(resultado[0],(orden)?res[0] : res[2]);
         numberBattle(resultado[1],(orden)? res[2] : res[0]);
+        await waitX(intervalo);
 
     }while(countdown);
     await waitaS(1);
@@ -506,7 +506,7 @@ async function animationBattle(participans:number[],res:number[]){
 }
 
 async function numberBattle(span:HTMLSpanElement,n:number){
-    if (n<0) n=0;
+    if (n<0 || !n) n=0;
     span.children[0].setAttribute('src',`../src/assets/battle/${Math.trunc(n/10)}.png`)
     span.children[1].setAttribute('src',`../src/assets/battle/${Math.trunc(n%10)}.png`)
 }
@@ -561,30 +561,18 @@ async function updateInfo(){
 async function endMatch(){
     const carts_host= await countCarts('ally');
     const carts_opp= await countCarts('opp');
-    if (carts_host>carts_opp){
-        if (localStorage.getItem('rol')==='host'){
-            await updateStats(localStorage.getItem('token') as string,'win');
-            alert('Winner');
-        } 
-        else if (localStorage.getItem('rol')==='opponent'){ 
-            await updateStats(localStorage.getItem('token') as string,'loss');
-            alert('Loser');
+
+
+    if (localStorage.getItem('rol')==='host'){
+        if (carts_host>carts_opp){
+            await updateStats(localStorage.getItem('token') as string,'win', localStorage.getItem('code') as string);
+        } else if (carts_host<carts_opp){
+            await updateStats(localStorage.getItem('token') as string,'loss', localStorage.getItem('code') as string);
+        } else{
+            await updateStats(localStorage.getItem('token') as string,'draw', localStorage.getItem('code') as string);
         }
-        else alert('The Blue Team has won');
-    } else if(carts_host<carts_opp){
-        if (localStorage.getItem('rol')==='host'){
-            await updateStats(localStorage.getItem('token') as string,'loss');
-            alert('Loser');
-        } 
-        else if (localStorage.getItem('rol')==='opponent'){ 
-            await updateStats(localStorage.getItem('token') as string,'win');
-            alert('Winner');
-        }
-        else alert('The Red Team has won');
-        
-    } else{
-        alert('Draw');
     }
+
     if (localStorage.getItem('rol')==='host') ws.send(JSON.stringify({code: localStorage.getItem('code') as string, msg: 'endMatch' }))
 
     localStorage.removeItem('code');

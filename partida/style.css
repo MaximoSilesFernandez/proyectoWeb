@@ -1,6 +1,6 @@
 body{
     background-image:url(../src/assets/fondo_total.png);
-    background-repeat: no-repeat;
+    background-repeat: repeat;
     background-size: cover;
 }
 
@@ -11,7 +11,7 @@ header{
 main{
     display:flex;
     justify-content:space-between;
-    width:80%;
+    width:100%;
     margin: auto;
     flex-wrap:wrap;
     
@@ -21,6 +21,9 @@ main{
     background-image: url(../src/assets/score/score.png);
     width: 86px;
     height:62px;
+    margin: auto;
+    margin-top: 10px;
+    margin-bottom: 10px;
     background-repeat: no-repeat;
     --background-size: cover;
     background-position: center;
@@ -43,12 +46,14 @@ main{
 
 
 #your_hand, #opp_hand{
-    background-color: lightblue;
+    --background-color: lightblue;
     display:flex;
     flex-wrap:wrap;
-    width:20%;
-    height: 500px;
+    width:84px;
+    height: 510px;
     margin:auto;
+    margin-top: 0;
+    margin-bottom: 0;
     div{
         width:84px;
         height: 102px;

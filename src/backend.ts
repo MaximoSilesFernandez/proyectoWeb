@@ -371,14 +371,21 @@ app.post('/addOpponent', async (req,res) =>{
 });
 
 app.post('/updateStats', async (req,res) =>{
+    const code=req.body.code as string;
     const decoded= await verifyTokenUser((req.headers.authorization as string).substring(7)) as any;
     const client=await newClient();
     await client.connect();
+    const opp_id= (await client.query('SELECT opponent_id FROM private.lobbies WHERE code=$1',[code])).rows[0].opponent_id;
     try{
         if (req.body.result=='win'){
             await client.query('UPDATE private.estadistica SET wins=wins+1 WHERE player_id=$1',[decoded.id]);
+            await client.query('UPDATE private.estadistica SET losses=losses+1 WHERE player_id=$1',[opp_id]);
+        } else if (req.body.result=='loss'){
+            await client.query('UPDATE private.estadistica SET losses=losses+1 WHERE player_id=$1',[decoded.id]);
+            await client.query('UPDATE private.estadistica SET wins=wins+1 WHERE player_id=$1',[opp_id]);
         } else{
-            await client.query('UPDATE private.estadistica SET losses=losses+1 WHERE player_id=$1',[decoded.id])
+            await client.query('UPDATE private.estadistica SET draws=draws+1 WHERE player_id=$1',[decoded.id]);
+            await client.query('UPDATE private.estadistica SET draws=draws+1 WHERE player_id=$1',[opp_id]);
         }
         res.send();
     } catch(err){
