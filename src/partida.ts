@@ -57,8 +57,9 @@ ws.addEventListener('message', async (mes)=>{
         }
         if (currentTurn>=11){
             console.log("Fin")
-            endMatch();
-            currentTurn=0;
+
+            await endMatch();
+
         }
         await everyDiv();
         if (localStorage.getItem('rol')!='spectator'){
@@ -79,7 +80,7 @@ ws.addEventListener('message', async (mes)=>{
         
         getHand();
     }
-    console.log(msg)
+    //console.log(msg)
     updateInfo()
 });
 
@@ -135,6 +136,7 @@ wsEvent.addEventListener('message', async (mes) =>{
     first_attack=[];
     combo_affected=[];
     resultado_battle=[];
+    place=[];
     ws.send(JSON.stringify({code: localStorage.getItem('code') as string, tablero: JSON.stringify(Object.fromEntries(mapa)).split(/(?<=},)/), msg: 'updateTablero', newTurn : currentTurn}))
     updateInfo()
 });
@@ -172,24 +174,35 @@ async function everyDiv(funcion: Function = ()=>{}){
 
 async function everyDivEventListener(event: Event){
     const div=event.currentTarget as HTMLDivElement;
+    console.log(div);
     if (yourTurn){
-
+        
         if (place.length===0){
             place[0]=parseInt(div.id);
-            selectedAnimated(div)
+            if (place[0]<1) selectedAnimated(div)
         }
         else {
+            console.log(parseInt(div.id)>1)
             if (place[0]===parseInt(div.id)){
+                console.log("a1")
                 place=[];
+                drawTablero(mapa);
             } else if (0< parseInt(div.id) && parseInt(div.id)<17){
+                console.log("a2")
                 place[1]= parseInt(div.id);
 
                 await action(((0<place[0])? mapa.get(place[0]): baraja[4+place[0]] ) as Carta);
+                //drawTablero(mapa);
                 place=[];
+            } else if(parseInt(div.id)<1){
+                drawTablero(mapa);
+                place[0]=parseInt(div.id);
+                if (place[0]<1) selectedAnimated(div)
             }
         }
     } else{
         place=[];
+        drawTablero(mapa);
     }
 
 }
@@ -209,18 +222,20 @@ function drawTablero(mapa: Map<number,Carta>){
 
         const casilla=(document.getElementById(`${i}`) as HTMLDivElement);
         const info= (0<i && i<17)? mapa.get(i)?.info as string || "" : (i<1)? baraja[4+i]?.info || "": "";
-
+        casilla.style.opacity="1.0";
         if (!info){
             for (let j=0; j <4; j++){
                 (casilla.children[j] as HTMLImageElement).style.visibility="hidden";
             }
-        } 
-        for (let j=0; j<4; j++){
-            console.log(casilla.children[j]);
-            (casilla.children[j] as HTMLImageElement).style.visibility="visible";
-            (casilla.children[j] as HTMLImageElement).setAttribute("src",`../src/assets/info/${info.charAt(j)}.png`);
-            
+        } else{
+
+            for (let j=0; j<4; j++){
+                (casilla.children[j] as HTMLImageElement).style.visibility="visible";
+                (casilla.children[j] as HTMLImageElement).setAttribute("src",`../src/assets/info/${info.charAt(j)}.png`);
+                
+            }
         }
+
         let url : string;
         if (0<i && i<17) url=`url(../src/assets/Cartas/${mapa.get(i)?.name}${(mapa.get(i)?.team=='opp')? '_opp' : ''}.png)`; 
         else if (i<1)   url=`url(../src/assets/Cartas/${baraja[4+i]?.name}${(baraja[4+i]?.team=='opp')? '_opp' : ''}.png)`; 
@@ -265,7 +280,7 @@ async function placement(carta: Carta){
 
 
 async function action(carta: Carta){
-    
+    if (carta.name=='empty') return;
     const casilla_elected=mapa.get(place[1]) as Carta
 
     
@@ -574,8 +589,11 @@ async function updateInfo(){
     score.children[1].setAttribute('src',`../src/assets/score/${await countCarts('opp')}_opp.png`);
 
 }
+let ended=false;
 
 async function endMatch(){
+    if (ended) return;
+    ended=true;
     const carts_host= await countCarts('ally');
     const carts_opp= await countCarts('opp');
 
@@ -588,9 +606,9 @@ async function endMatch(){
         } else{
             await updateStats(localStorage.getItem('token') as string,'draw', localStorage.getItem('code') as string);
         }
+        ws.send(JSON.stringify({code: localStorage.getItem('code') as string, msg: 'endMatch' }))
     }
 
-    if (localStorage.getItem('rol')==='host') ws.send(JSON.stringify({code: localStorage.getItem('code') as string, msg: 'endMatch' }))
 
     localStorage.removeItem('code');
     localStorage.removeItem('currentTurn');
@@ -606,3 +624,6 @@ const waitaS= (s:number) => new Promise(resolve => setTimeout(resolve,s*1000));
 const waitX=(ms:number) => new Promise(resolve => setTimeout(resolve,ms));
 
 
+
+
+console.log(mapa)

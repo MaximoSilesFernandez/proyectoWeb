@@ -75,20 +75,19 @@ app.ws('/match', async (ws, req) => {
 
         } else if (mensage.msg==='getTablero'){
             const mapa=await getMap(mensage.code) as string;
-            if (mapa /*&& (clientMatches.get(room)?.length as number)>=2*/){
+            if (mapa && players.length>=2){
                 const turno=( await getTurn(mensage.code as string));
 
                 players.forEach(player  => {
                     player.send(JSON.stringify({mapa: mapa, msg:'sendTablero', newTurn: turno.turn}));
                 });
-            } else{
+            } else if (!mapa){
                 players.forEach(player  => {
                     player.send(JSON.stringify({mapa: '', msg:'createTablero'}));
                 });
             }
         } else if(mensage.msg==='updateTablero'){
             await updateMap(mensage.code,mensage.tablero,mensage.newTurn);
-            console.log(mensage.newTurn);
             const mapa=await getMap(mensage.code) as string;
             players.forEach(player  => {
                     player.send(JSON.stringify({mapa: mapa, msg:'sendTablero', newTurn : mensage.newTurn}));
@@ -376,6 +375,8 @@ app.post('/updateStats', async (req,res) =>{
     const client=await newClient();
     await client.connect();
     const opp_id= (await client.query('SELECT opponent_id FROM private.lobbies WHERE code=$1',[code])).rows[0].opponent_id;
+    console.log(decoded.id)
+    console.log(opp_id);
     try{
         if (req.body.result=='win'){
             await client.query('UPDATE private.estadistica SET wins=wins+1 WHERE player_id=$1',[decoded.id]);
@@ -526,3 +527,4 @@ async function verifyTokenUser(userToken:string){
     });
     });
 }
+
