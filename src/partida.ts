@@ -174,7 +174,10 @@ async function everyDivEventListener(event: Event){
     const div=event.currentTarget as HTMLDivElement;
     if (yourTurn){
 
-        if (place.length===0) place[0]=parseInt(div.id);
+        if (place.length===0){
+            place[0]=parseInt(div.id);
+            selectedAnimated(div)
+        }
         else {
             if (place[0]===parseInt(div.id)){
                 place=[];
@@ -191,7 +194,9 @@ async function everyDivEventListener(event: Event){
 
 }
 
-
+function selectedAnimated(div:HTMLDivElement){
+    div.style.opacity="0.5";
+}
 
 
 
@@ -210,7 +215,8 @@ function drawTablero(mapa: Map<number,Carta>){
                 (casilla.children[j] as HTMLImageElement).style.visibility="hidden";
             }
         } 
-        for (let j=0; j<info.length; j++){
+        for (let j=0; j<4; j++){
+            console.log(casilla.children[j]);
             (casilla.children[j] as HTMLImageElement).style.visibility="visible";
             (casilla.children[j] as HTMLImageElement).setAttribute("src",`../src/assets/info/${info.charAt(j)}.png`);
             
@@ -374,6 +380,7 @@ async function election_attack(attacker:Carta,place_attacker:number,listDeffende
     var attackEventListener= async (event: Event) =>{
         const pos=Number((event.currentTarget as HTMLDivElement).id);
 
+        document.querySelectorAll('.selected')?.forEach(res => res.remove());
         await attack(attacker,place_attacker,pos,mapa.get(pos) as Carta,listContraattack[listDeffendersPos.indexOf(pos)] as string); 
         everyDiv(attackEventListener);
     };
@@ -385,6 +392,7 @@ async function election_attack(attacker:Carta,place_attacker:number,listDeffende
     else{
 
         for( const pos of listDeffendersPos){
+            (document.getElementById(`${pos}`) as HTMLDivElement).innerHTML+=`<img src="../src/assets/select.png" class="selected" alt="">`;
             document.getElementById(`${pos}`)?.addEventListener('click', attackEventListener,{once:true});
         }
     }
