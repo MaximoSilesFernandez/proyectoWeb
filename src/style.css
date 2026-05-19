@@ -60,3 +60,9 @@ button {
 button:hover {
   background: #2563eb;
 }
+
+#stats{
+  position: absolute;
+  top:0;
+  left:0;
+}

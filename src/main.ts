@@ -1,4 +1,5 @@
-import {verifyCode,signup,login,determineRol, alreadyInMatch} from "./api.ts";
+
+import {verifyCode, verifyToken,signup,login,determineRol,getStats, alreadyInMatch} from "./api.ts";
 
 const createLobyButton = document.getElementById("createLoby") as HTMLButtonElement;
 const joinLobyButton = document.getElementById("joinLoby") as HTMLButtonElement;
@@ -8,7 +9,7 @@ const signUpButton=document.getElementById("signUpButton") as HTMLButtonElement;
 const divs=document.querySelectorAll("div") as NodeListOf<HTMLDivElement>;
 
 async function changingDiv(){
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 5; i++) {
         divs[i].classList.toggle("hidden");
         
     }
@@ -23,10 +24,37 @@ localStorage.removeItem('rol');
 if (localStorage.getItem('token')){
     divs[0].classList.add("hidden");
     divs[1].classList.add("hidden");
+    await stats();
 } else{
     divs[2].classList.add("hidden");
     divs[3].classList.add("hidden");
+    divs[4].classList.add('hidden');
 }
+
+async function stats() {
+    console.log("xd")
+    const name= (await verifyToken(localStorage.getItem('token') as string)).name;
+    const stats= await getStats(localStorage.getItem('token') as string);
+    console.log(stats);
+    divs[4].innerHTML=
+    `<table>
+        <tr>
+            <th>${name}</th>
+        </tr>
+        <tr>
+            <th style="color: green;">Wins</th>
+            <th style="color: gray;">Draws</th>
+            <th style="color: red;">Losses</th>
+        </tr>
+        <tr>
+            <td>${stats.wins}</td>
+            <td>${stats.draws}</td>
+            <td>${stats.losses}</td>
+        </tr>
+    </table>`
+
+}
+
 
 loginButton.addEventListener("click", async ()=>{
     const name=(document.getElementById("name_login") as HTMLInputElement).value;

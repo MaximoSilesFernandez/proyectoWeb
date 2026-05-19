@@ -6,6 +6,7 @@ body{
 
 header{
     background-color: aqua ;
+    display: none;
 }
 
 main{
@@ -44,6 +45,15 @@ main{
     }
 }
 
+#coin{
+    position: absolute;
+
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+
+    visibility: hidden;
+}
 
 #your_hand, #opp_hand{
     --background-color: lightblue;

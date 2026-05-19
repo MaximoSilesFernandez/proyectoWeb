@@ -414,7 +414,23 @@ app.get('/alreadyInMatch', async (req,res) =>{
     } finally{
         client.end();
     }
-})
+});
+
+app.get('/getStats', async (req,res) =>{
+    const decoded=  await verifyTokenUser((req.headers.authorization as string).substring(7)) as any;
+    const client= await newClient();
+    await client.connect();
+
+    try{
+        res.json( (await client.query('SELECT wins,draws,losses FROM private.estadistica WHERE player_id=$1',[decoded.id]) as any).rows[0]);
+    } catch (err){
+        console.log(err);
+    } finally{
+        client.end();
+    }
+
+
+});
 
 app.get( '/verifyUser' , async (req,res) =>{
     

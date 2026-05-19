@@ -172,6 +172,18 @@ export async function determineRol(code:string, token:string){
 
 }
 
+export async function getStats(token:string){
+    const res=await fetch('http://localhost:3000/getStats',{
+        method: 'GET',
+        headers:{
+            "Content-Type":"application/json",
+            "Authorization": `Bearer ${token}`
+        }
+    })
+
+    return await res.json();
+}
+
 export async function alreadyInMatch(token:string){
     const res=await fetch('http://localhost:3000/alreadyInMatch',{
         method: 'GET',

@@ -1,8 +1,10 @@
 import { getCarta, getTablero, updateTablero,  updateStats, getWebSocket, getWebSocketEvent, verifyToken, createTablero} from "./api.ts";
 import type {Carta} from "./api.ts";
 const tablero= document.querySelector("main")?.querySelectorAll("div>div") as NodeListOf<HTMLDivElement>;
-const logs=document.querySelector('#logs') as HTMLDivElement;
+
 const score=document.querySelector('#score') as HTMLDivElement;
+const coin= document.querySelector('#coin') as HTMLImageElement;
+
 
 let mapa= new Map<number,Carta>();
 let baraja= [] as Carta[];
@@ -56,6 +58,7 @@ ws.addEventListener('message', async (mes)=>{
         if (currentTurn>=11){
             console.log("Fin")
             endMatch();
+            currentTurn=0;
         }
         await everyDiv();
         if (localStorage.getItem('rol')!='spectator'){
@@ -351,7 +354,6 @@ async function scan_attacks(carta: Carta,position:number, combo:boolean = false)
             if (combo){
 
                 combo_affected.push(place_enemigo);
-                logs.innerHTML+=`<ul>${carta.name} gana a ${carta_enemiga.name} por combo</ul>`;
 
             } else{
                 pos_deff.push(place_enemigo);
@@ -395,7 +397,7 @@ async function election_attack(attacker:Carta,place_attacker:number,listDeffende
 
 
 async function attack(attacker:Carta,place_attacker:number,place_defender:number,deffender:Carta,contrattack:String){
-    logs.innerHTML+=`<ul>${attacker.name} ataca a ${deffender.name}</ul>`;
+
 
     const opp_attk=deffender.directions.split('-') as String[];
     
@@ -415,7 +417,7 @@ async function attack(attacker:Carta,place_attacker:number,place_defender:number
 
         
         if (attack_result>=defense_result){
-            logs.innerHTML+=`<ul>${attacker.name} gana a ${deffender.name}</ul>`
+
             first_attack[0]=place_attacker;
             first_attack[1]=place_defender;
             const clon_deffender= {
@@ -432,7 +434,7 @@ async function attack(attacker:Carta,place_attacker:number,place_defender:number
             await scan_attacks(clon_deffender,place_defender,true);
             
         } else if (attack_result<defense_result){
-            logs.innerHTML+=`<ul>${attacker.name} pierde contra ${deffender.name}</ul>`
+
             first_attack[0]=place_defender;
             first_attack[1]=place_attacker;
 
@@ -454,7 +456,7 @@ async function attack(attacker:Carta,place_attacker:number,place_defender:number
             
         } 
     } else{
-        logs.innerHTML+=`<ul>${attacker.name} gana a ${deffender.name} por sorpresa</ul>`
+
         first_attack[0]=place_attacker;
         first_attack[1]=place_defender;
         
@@ -532,6 +534,14 @@ async function animationCart(carta:Carta,pos:number){
 
 
 async function coinAnimation(who : string){
+    coin.style.visibility="visible";
+    await waitaS(3);
+
+    coin.setAttribute('src',`../src/assets/coin_${who}.png`)
+
+    await waitaS(2);
+    coin.style.visibility="hidden";
+
     if (who=='host'){
         console.log('Supuesta animacion pro-host')
     } else if(who=='opponent'){
@@ -551,7 +561,6 @@ async function countCarts(team:string){
 }
 
 async function updateInfo(){
-    console.log(`../src/assets/score/${await countCarts('ally')}_host.png`);
     (document.querySelector('header>div') as HTMLDivElement).innerHTML=`Turno ${currentTurn} | Cartas Azules=${await countCarts('ally')} | Cartas Rojas=${await countCarts('opp')}`;
     score.children[0].setAttribute('src',`../src/assets/score/${await countCarts('ally')}_host.png`);
     score.children[1].setAttribute('src',`../src/assets/score/${await countCarts('opp')}_opp.png`);
