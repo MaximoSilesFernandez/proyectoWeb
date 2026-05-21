@@ -67,6 +67,8 @@ main{
     div{
         width:84px;
         height: 102px;
+        margin-top: 5px ;
+        margin-bottom: 5px;
         background-repeat: no-repeat;
         background-size: cover;
     }
@@ -125,5 +127,49 @@ main{
     width: 45px;
     left: 40%;
     bottom:  5px;
+
+}
+
+
+
+@media (max-width: 768px) {
+    #opp_hand{
+        --background-color: lightblue;
+        display:flex;
+        flex-wrap:wrap;
+        width:470px;
+        height: 102px;
+        margin-left:20%;
+        margin-top: 0;
+        margin-bottom: 0;
+        div{
+            width:84px;
+            height: 102px;
+            margin-left: 5px ;
+            margin-right: 5px;
+            background-repeat: no-repeat;
+            background-size: cover;
+        }
+    }
+}
+@media (max-width:610px){
+    #your_hand, #opp_hand{
+        --background-color: lightblue;
+        display:flex;
+        flex-wrap:wrap;
+        width:470px;
+        height: 102px;
+        margin:auto;
+        margin-top: 0;
+        margin-bottom: 0;
+        div{
+            width:84px;
+            height: 102px;
+            margin-left: 5px ;
+            margin-right: 5px;
+            background-repeat: no-repeat;
+            background-size: cover;
+        }
+    }
 
 }
