@@ -80,12 +80,10 @@ main{
     display: flex;
     justify-content: space-around;
     flex-wrap: wrap;
-    width:408px;
-    height: 480px;
+    width:342px;
+    height: 414px;
     margin: auto;
-    padding-left:20px;
-    padding-right:40px;
-    padding-top: 0px;
+
     background-image: url(../src/assets/fondo.png);
     background-repeat: no-repeat;
     background-size: cover;
@@ -134,42 +132,36 @@ main{
 
 @media (max-width: 768px) {
     #opp_hand{
-        --background-color: lightblue;
-        display:flex;
-        flex-wrap:wrap;
         width:470px;
         height: 102px;
-        margin-left:20%;
-        margin-top: 0;
-        margin-bottom: 0;
+        margin-left:25%;
+
         div{
-            width:84px;
-            height: 102px;
+
             margin-left: 5px ;
             margin-right: 5px;
-            background-repeat: no-repeat;
-            background-size: cover;
+
         }
     }
+    
 }
-@media (max-width:610px){
+@media (max-width:650px){
     #your_hand, #opp_hand{
-        --background-color: lightblue;
-        display:flex;
-        flex-wrap:wrap;
+
         width:470px;
         height: 102px;
         margin:auto;
-        margin-top: 0;
-        margin-bottom: 0;
+
         div{
-            width:84px;
-            height: 102px;
+
             margin-left: 5px ;
             margin-right: 5px;
-            background-repeat: no-repeat;
-            background-size: cover;
+
         }
+    }
+    #tablero{
+        margin-top: 20px;
+        margin-bottom: 10px;
     }
 
 }
