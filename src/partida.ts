@@ -1,7 +1,7 @@
-import { getCarta, getTablero, updateTablero,  updateStats, getWebSocket, getWebSocketEvent, verifyToken, createTablero} from "./api.ts";
+import { getCarta,  updateStats, getWebSocket, getWebSocketEvent, verifyToken, createTablero} from "./api.ts";
 import type {Carta} from "./api.ts";
-const tablero= document.querySelector("main")?.querySelectorAll("div>div") as NodeListOf<HTMLDivElement>;
 
+const tablero= document.querySelector("main")?.querySelectorAll("div>div") as NodeListOf<HTMLDivElement>;
 const score=document.querySelector('#score') as HTMLDivElement;
 const coin= document.querySelector('#coin') as HTMLImageElement;
 
@@ -9,59 +9,53 @@ const coin= document.querySelector('#coin') as HTMLImageElement;
 let mapa= new Map<number,Carta>();
 let baraja= [] as Carta[];
 let place= [] as number[];
-
+let currentTurn=0;
+let yourTurn=false;
 
 const codeInfoBattle=`<span class='resultado'><img src='../src/assets/battle/0.png'><img src='../src/assets/battle/0.png'></span>`
-
 const carts= ['Bomb','Fang','Flan','Goblin','Ironite','Lizzard','Sahagin','Skeleton','Zaghnol','Zombie'] as string[];
 
 const audioTakeOver=new Audio(`../src/assets/sounds/snd_bell.wav`);
 const audioBattle=new Audio(`../src/assets/sounds/snd_badexplosion.wav`)
 audioTakeOver.volume=0.2;
 audioBattle.volume=0.2;
-let currentTurn=0;
-let yourTurn=false;
 
-console.log(localStorage.getItem('rol'))
+
+
 
 if (localStorage.getItem('rol')!='spectator'){
-
     if (localStorage.getItem('currentTurn')) currentTurn=Number(localStorage.getItem('currentTurn'));
-    
     yourTurn=(localStorage.getItem('firstTurn')==='true')? (currentTurn%2===1)? true : false : (currentTurn%2===0)? true : false;
-    console.log (yourTurn);
 }
-
-
 
 
 updateInfo();
 
 const ws=await getWebSocket(localStorage.getItem('code') as string, ((await verifyToken(localStorage.getItem('token') as any) as any)?.name),localStorage.getItem('token') as string);
+
 ws.addEventListener('message', async (mes)=>{
     const msg=JSON.parse(mes.data);
 
     if (msg.msg==='createTablero' && localStorage.getItem('rol')==='host'){
         (await createTablero(localStorage.getItem('code') as string,localStorage.getItem('token') as string)) as unknown as string
+
     } else if(msg.msg==='sendTablero'){
 
         const map=JSON.parse(msg.mapa) as JSON;
-        
-
         for (let i = 1; i < 17; i++) {  
             mapa.set(i,Object.values(map)[i-1]) 
         }
         drawTablero(mapa);
+
+
         if (msg.newTurn){
             await updateTurn(msg.newTurn);
         }
         if (currentTurn>=11){
-            console.log("Fin")
-
             await endMatch();
-
         }
         await everyDiv();
+
         if (localStorage.getItem('rol')!='spectator'){
             ws.send(JSON.stringify({code: localStorage.getItem('code') ,rol : localStorage.getItem('rol'), msg : 'getHand'}));
         }
@@ -74,49 +68,31 @@ ws.addEventListener('message', async (mes)=>{
         
     } else if (msg.msg==='sendHand'){
         const hand=Object.values(msg.hand)[0] as string;
-
-
         localStorage.setItem('baraja',hand.replaceAll(/[{}"]/g,""));
         
         getHand();
     }
-    //console.log(msg)
     updateInfo()
 });
 
 ws.addEventListener('open',() =>{
     ws.send(JSON.stringify({code: localStorage.getItem('code') as string, msg: 'getTablero'}));
-
-    
-    //ws.send(localStorage.getItem('code') as string);
 });
-
-
 
 ws.OPEN;
 
 
 const wsEvent= await getWebSocketEvent(localStorage.getItem('token') as string);
 
-async function updateTurn(newTurn:number){
-    currentTurn=newTurn;
-    localStorage.setItem('currentTurn',String(currentTurn));
-    yourTurn=(localStorage.getItem('firstTurn')==='true')? (currentTurn%2===1)? true : false : (currentTurn%2===0)? true : false;
-}
-
 
 wsEvent.addEventListener('message', async (mes) =>{
-
     const msg=JSON.parse(mes.data);
-
-
     const map=JSON.parse(msg.mapa) as JSON;
         
-    
     for (let i = 1; i < 17; i++) {  
-        
         mapa.set(i,Object.values(map)[i-1]) 
     }
+
     await updateTurn(msg.turn);
     drawTablero(mapa);
     
@@ -127,12 +103,12 @@ wsEvent.addEventListener('message', async (mes) =>{
 
     } else{
         await animationBattle(msg.attack, msg.res_battle);
-
     }
     await waitaS(2);
     if (msg.combo.length!=0){
         await animationCombo(msg.combo,msg.attack[0]);
     }
+
     first_attack=[];
     combo_affected=[];
     resultado_battle=[];
@@ -153,16 +129,17 @@ async function createHand(){
 
 }
 
-
-
 async function getHand() {
     const team=(localStorage.getItem('rol')==='host')? 'ally' : 'opp';
-    
-
     baraja=await getCarta(localStorage.getItem('baraja')?.split(",") as string[],team) as Carta[];
-    await drawTablero(mapa);
+    drawTablero(mapa);
 }
 
+async function updateTurn(newTurn:number){
+    currentTurn=newTurn;
+    localStorage.setItem('currentTurn',String(currentTurn));
+    yourTurn=(localStorage.getItem('firstTurn')==='true')? (currentTurn%2===1)? true : false : (currentTurn%2===0)? true : false;
+}
 
 async function everyDiv(funcion: Function = ()=>{}){
     tablero?.forEach(async casilla =>{
@@ -174,9 +151,7 @@ async function everyDiv(funcion: Function = ()=>{}){
 
 async function everyDivEventListener(event: Event){
     const div=event.currentTarget as HTMLDivElement;
-    console.log(div);
     if (yourTurn){
-        
         if (place.length===0){
             place[0]=parseInt(div.id);
             if (place[0]<1) selectedAnimated(div)
@@ -184,20 +159,18 @@ async function everyDivEventListener(event: Event){
         else {
             console.log(parseInt(div.id)>1)
             if (place[0]===parseInt(div.id)){
-                console.log("a1")
                 place=[];
                 drawTablero(mapa);
-            } else if (0< parseInt(div.id) && parseInt(div.id)<17){
-                console.log("a2")
-                place[1]= parseInt(div.id);
 
+            } else if (0< parseInt(div.id) && parseInt(div.id)<17){
+                place[1]= parseInt(div.id);
                 await action(((0<place[0])? mapa.get(place[0]): baraja[4+place[0]] ) as Carta);
-                //drawTablero(mapa);
                 place=[];
+
             } else if(parseInt(div.id)<1){
-                drawTablero(mapa);
                 place[0]=parseInt(div.id);
                 if (place[0]<1) selectedAnimated(div)
+                drawTablero(mapa);
             }
         }
     } else{
@@ -211,18 +184,14 @@ function selectedAnimated(div:HTMLDivElement){
     div.style.opacity="0.5";
 }
 
-
-
 function drawTablero(mapa: Map<number,Carta>){
-
-
-    
 
     for (let i=-4; i<22; i++){
 
         const casilla=(document.getElementById(`${i}`) as HTMLDivElement);
         const info= (0<i && i<17)? mapa.get(i)?.info as string || "" : (i<1)? baraja[4+i]?.info || "": "";
         casilla.style.opacity="1.0";
+
         if (!info){
             for (let j=0; j <4; j++){
                 (casilla.children[j] as HTMLImageElement).style.visibility="hidden";
@@ -231,60 +200,32 @@ function drawTablero(mapa: Map<number,Carta>){
 
             for (let j=0; j<4; j++){
                 (casilla.children[j] as HTMLImageElement).style.visibility="visible";
-                (casilla.children[j] as HTMLImageElement).setAttribute("src",`../src/assets/info/${info.charAt(j)}.png`);
-                
+                (casilla.children[j] as HTMLImageElement).setAttribute("src",`../src/assets/info/${info.charAt(j)}.png`);         
             }
         }
-
         let url : string;
+
         if (0<i && i<17) url=`url(../src/assets/Cartas/${mapa.get(i)?.name}${(mapa.get(i)?.team=='opp')? '_opp' : ''}.png)`; 
         else if (i<1)   url=`url(../src/assets/Cartas/${baraja[4+i]?.name}${(baraja[4+i]?.team=='opp')? '_opp' : ''}.png)`; 
         else{
+
             let limit;
-
             limit=( yourTurn)? 5-Math.trunc(currentTurn/2) : 6-currentTurn/2;
-
-
             if (i<=(limit+16)){
                 url=`url(../src/assets/Cartas/unknown.png)`;
             } else{
                 url=``;
             }
-                
-            
         }  
-
         casilla.style.backgroundImage=url;
-
-        
     }
     updateInfo();
 }
 
-
-//await getCartas();
-
-
-async function placement(carta: Carta){
-
-    mapa.set(place[1],carta)
-
-    let name_baraja=localStorage.getItem('baraja') as string;
-
-    name_baraja=name_baraja.replace(baraja[place[0]+4].name,'');
-
-    drawTablero(mapa);
-    ws.send(JSON.stringify({ msg: 'updateHand', code: localStorage.getItem('code'), hand : name_baraja, rol: localStorage.getItem('rol')}))
-
-}
-
-
 async function action(carta: Carta){
+
     if (carta.name=='empty') return;
     const casilla_elected=mapa.get(place[1]) as Carta
-
-    
-    
 
     if (place[0]<1 && casilla_elected.name=="empty"){
         await placement(carta);
@@ -292,6 +233,15 @@ async function action(carta: Carta){
     } 
 }
 
+async function placement(carta: Carta){
+
+    mapa.set(place[1],carta)
+    let name_baraja=localStorage.getItem('baraja') as string;
+    name_baraja=name_baraja.replace(baraja[place[0]+4].name,'');
+
+    drawTablero(mapa);
+    ws.send(JSON.stringify({ msg: 'updateHand', code: localStorage.getItem('code'), hand : name_baraja, rol: localStorage.getItem('rol')}))
+}
 
 let first_attack=[] as number[];
 let resultado_battle=[] as number[];
@@ -301,14 +251,13 @@ async function scan_attacks(carta: Carta,position:number, combo:boolean = false)
     const borde_izq=[1,5,9,13] as number[];
     const borde_der=[4,8,12,16] as number[];
     const pos=carta.directions.split("-") as String[];
-
-
     let pos_deff=[] as number[];
     let contraattacks= [] as String[];
 
     for (const attk of pos) {
         let carta_enemiga;
         let place_enemigo;
+
         switch (attk){
             case 'NW':
                 carta_enemiga=(mapa.get(position-5) as Carta);
@@ -348,8 +297,8 @@ async function scan_attacks(carta: Carta,position:number, combo:boolean = false)
                 break;
                                     
         }
-        if (!carta_enemiga) continue;
 
+        if (!carta_enemiga) continue;
         const condition_1=(carta_enemiga.name!='empty' && carta_enemiga.team!=carta.team && carta_enemiga.name!='blocked');
         let contraataque='';
 
@@ -373,9 +322,7 @@ async function scan_attacks(carta: Carta,position:number, combo:boolean = false)
 
         if (contraataque!==''){
             if (combo){
-
                 combo_affected.push(place_enemigo);
-
             } else{
                 pos_deff.push(place_enemigo);
                 contraattacks.push(contraataque);
@@ -383,48 +330,34 @@ async function scan_attacks(carta: Carta,position:number, combo:boolean = false)
         }
     }
     if (pos_deff.length>0 && !combo) await election_attack(carta,place[1],pos_deff,contraattacks);
-    else if (!combo){
 
+    else if (!combo){
         ws.send(JSON.stringify({code: localStorage.getItem('code') as string, tablero: JSON.stringify(Object.fromEntries(mapa)).split(/(?<=},)/), msg: 'updateTablero', newTurn: ++currentTurn}))
     }
 
 }
 
-
 async function election_attack(attacker:Carta,place_attacker:number,listDeffendersPos:number[],listContraattack:String[]){
     var attackEventListener= async (event: Event) =>{
         const pos=Number((event.currentTarget as HTMLDivElement).id);
-
         document.querySelectorAll('.selected')?.forEach(res => res.remove());
         await attack(attacker,place_attacker,pos,mapa.get(pos) as Carta,listContraattack[listDeffendersPos.indexOf(pos)] as string); 
         everyDiv(attackEventListener);
     };
 
-
     if (listDeffendersPos.length===1){
         await attack(attacker,place_attacker,listDeffendersPos[0],mapa.get(listDeffendersPos[0]) as Carta,listContraattack[0]);
     } 
     else{
-
         for( const pos of listDeffendersPos){
             (document.getElementById(`${pos}`) as HTMLDivElement).innerHTML+=`<img src="../src/assets/select.png" class="selected" alt="">`;
             document.getElementById(`${pos}`)?.addEventListener('click', attackEventListener,{once:true});
         }
     }
-        
-    
-
 }
 
-
-
-
 async function attack(attacker:Carta,place_attacker:number,place_defender:number,deffender:Carta,contrattack:String){
-
-
     const opp_attk=deffender.directions.split('-') as String[];
-    
-    
     
     if (opp_attk.includes(contrattack)){
         
@@ -438,17 +371,18 @@ async function attack(attacker:Carta,place_attacker:number,place_defender:number
         let first_defense_result=Math.random()*16+def_power*16;
         let defense_result=first_defense_result-(Math.random()*first_defense_result+1);
 
-        
         if (attack_result>=defense_result){
 
             first_attack[0]=place_attacker;
             first_attack[1]=place_defender;
+
             const clon_deffender= {
                 name: deffender.name,
                 info: deffender.info,
                 directions: deffender.directions,
                 team : (deffender.team=='ally')? 'opp' : 'ally'
             }
+
             resultado_battle[0]=first_attack_result;
             resultado_battle[1]=attack_result;
             resultado_battle[2]=first_defense_result;
@@ -473,24 +407,16 @@ async function attack(attacker:Carta,place_attacker:number,place_defender:number
                 team : (attacker.team=='ally')? 'opp' : 'ally'
             }
 
-
-
             await scan_attacks(clon_attacker,place_attacker,true);
             
         } 
     } else{
-
         first_attack[0]=place_attacker;
         first_attack[1]=place_defender;
-        
     }
 
     wsEvent.send(JSON.stringify({code: localStorage.getItem('code') as string, tablero: JSON.stringify(Object.fromEntries(mapa)), attack: first_attack, combo : combo_affected, res_battle: resultado_battle, turn: ++currentTurn }))
-    
-    
-    
 }
-
 
 async function animationTakeOver(participans:number[]){
     const winner=mapa.get(participans[0]) as Carta;
@@ -500,13 +426,18 @@ async function animationTakeOver(participans:number[]){
     drawTablero(mapa);
     await audioTakeOver.play().catch((err) =>{});
 }
+
 async function animationBattle(participans:number[],res:number[]){
+
     const winner=mapa.get(participans[0]) as Carta;
     const loser=mapa.get(participans[1]) as Carta;
     let orden=true;
+
     if (participans[0]>participans[1]) orden=false;
+
     tablero[participans[0]+4].innerHTML+=codeInfoBattle;
     tablero[participans[1]+4].innerHTML+=codeInfoBattle;
+
     let resultado=document.querySelectorAll('.resultado') as NodeListOf<HTMLSpanElement>;
     let countdown=true;
     let intervalo=(res[0]-res[1]>res[2]-res[3])? 2000/(res[0]-res[1]) : 2000/(res[2]-res[3]);
@@ -521,7 +452,8 @@ async function animationBattle(participans:number[],res:number[]){
         numberBattle(resultado[1],(orden)? res[2] : res[0]);
         await waitX(intervalo);
 
-    }while(countdown);
+    } while(countdown);
+
     await waitaS(1);
     document.querySelectorAll('.resultado')?.forEach(res => res.remove());
     loser.team=winner.team;
@@ -535,6 +467,7 @@ async function numberBattle(span:HTMLSpanElement,n:number){
     span.children[0].setAttribute('src',`../src/assets/battle/${Math.trunc(n/10)}.png`)
     span.children[1].setAttribute('src',`../src/assets/battle/${Math.trunc(n%10)}.png`)
 }
+
 async function animationCombo(participans:number[],winner:number){
     const winner_team=(mapa.get(winner) as Carta).team as string;
     
@@ -545,24 +478,15 @@ async function animationCombo(participans:number[],winner:number){
     drawTablero(mapa);
     await audioTakeOver.play().catch((err) =>{});
     await waitaS(2);
-
-
-    
-
 }
-
-async function animationCart(carta:Carta,pos:number){
-
-}
-
 
 async function coinAnimation(who : string){
     coin.style.visibility="visible";
+
     await waitaS(3);
-
     coin.setAttribute('src',`../src/assets/coin_${who}.png`)
-
     await waitaS(2);
+
     coin.style.visibility="hidden";
 
     if (who=='host'){
@@ -570,6 +494,7 @@ async function coinAnimation(who : string){
     } else if(who=='opponent'){
         console.log('Supuesta animacion pro-opp')
     }
+
     const interpole=(localStorage.getItem('rol')==who)? 'true' : 'false';
     localStorage.setItem('firstTurn',interpole);
     await updateTurn(1);
@@ -587,16 +512,16 @@ async function updateInfo(){
     (document.querySelector('header>div') as HTMLDivElement).innerHTML=`Turno ${currentTurn} | Cartas Azules=${await countCarts('ally')} | Cartas Rojas=${await countCarts('opp')}`;
     score.children[0].setAttribute('src',`../src/assets/score/${await countCarts('ally')}_host.png`);
     score.children[1].setAttribute('src',`../src/assets/score/${await countCarts('opp')}_opp.png`);
-
 }
+
 let ended=false;
 
 async function endMatch(){
     if (ended) return;
+
     ended=true;
     const carts_host= await countCarts('ally');
     const carts_opp= await countCarts('opp');
-
 
     if (localStorage.getItem('rol')==='host'){
         if (carts_host>carts_opp){
@@ -609,7 +534,6 @@ async function endMatch(){
         ws.send(JSON.stringify({code: localStorage.getItem('code') as string, msg: 'endMatch' }))
     }
 
-
     localStorage.removeItem('code');
     localStorage.removeItem('currentTurn');
     localStorage.removeItem('firstTurn');
@@ -617,13 +541,6 @@ async function endMatch(){
     window.location.href="../index.html";        
 }
 
-
-
-
 const waitaS= (s:number) => new Promise(resolve => setTimeout(resolve,s*1000));
 const waitX=(ms:number) => new Promise(resolve => setTimeout(resolve,ms));
 
-
-
-
-console.log(mapa)

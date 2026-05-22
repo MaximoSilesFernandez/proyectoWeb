@@ -62,7 +62,6 @@ export async function verifyCode(code:string){
     }).catch(err =>{
         console.log(err)
     })
-    console.log(res);
     return (res)? true : false;
 }
 
