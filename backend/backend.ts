@@ -1,7 +1,7 @@
 import express from 'express';
-import jsonwebtoken from 'jsonwebtoken';
+import jsonwebtoken, { decode } from 'jsonwebtoken';
 import pg from 'pg';
-import dotenv from 'dotenv';
+import dotenv from 'dotenv'; 
 import expressWs from 'express-ws';
 import crypto from 'crypto';
 
@@ -13,7 +13,6 @@ const app=ws.app;
 const clientMatches=new Map<String,String[]>();
 const clients=new Map<String,any>();
 let comienza: string;
-
 
 app.ws('/match', async (ws, req) => {
     const token=req.query.token as string
@@ -169,13 +168,14 @@ app.ws('/events', async (ws,req) =>{
 
 async function newClient(){
     return new pg.Client({
-        user: process.env.DB_USER || 'postgres',
-        host: process.env.DB_HOST || 'localhost',
-        database: process.env.DB_NAME || 'postgres',
-        password: process.env.DB_PASSWORD || 'postgres',
-        port: parseInt(process.env.DB_PORT || '5432'),
+        user: process.env.DB_USER as string,
+        host: process.env.DB_HOST as string,
+        database: process.env.DB_NAME as string,
+        password: process.env.DB_PASSWORD as string,
+        port: parseInt(process.env.DB_PORT as string),
     });
 }
+
 
 app.use(express.json());
 app.use(express.urlencoded());
@@ -406,24 +406,34 @@ app.get('/alreadyInMatch', async (req,res) =>{
 });
 
 app.get('/getStats', async (req,res) =>{
+    console.log( process.env.DB_USER as string,
+         process.env.DB_HOST as string,
+         process.env.DB_NAME as string,
+         process.env.DB_PASSWORD as string,
+         parseInt(process.env.DB_PORT as string));
     const decoded=  await verifyTokenUser((req.headers.authorization as string).substring(7)) as any;
     const client= await newClient();
     await client.connect();
-
     try{
         res.json( (await client.query('SELECT wins,draws,losses FROM private.estadistica WHERE player_id=$1',[decoded.id]) as any).rows[0]);
     } catch (err){
-        console.log(err);
     } finally{
         client.end();
     }
+    
+
 
 
 });
 
 app.get( '/verifyUser' , async (req,res) =>{
-    const decoded= await verifyTokenUser((req.headers.authorization as string).substring(7)) as any;
-    res.json({name: decoded.name, id: decoded.id});
+    const decoded= (await verifyTokenUser((req.headers.authorization as string).substring(7)) as any);
+    if (decoded){
+
+        res.json({name: decoded.name, id: decoded.id});
+    } else{
+        res.status(498).json();
+    }
 });
 
 app.post( '/login' , async (req,res) =>{
@@ -502,7 +512,7 @@ async function createTokenUser(name:string){
 async function verifyTokenUser(userToken:string){
     return new Promise( (resolve,reject) =>{
         jsonwebtoken.verify(userToken,(process.env.TOKEN_PRIVATE_KEY as string).replace(/\\n/g, '\n'), (err,decoded) =>{
-        if (err) reject(false);
+        if (err) '';
         else resolve(decoded);
     });
     });

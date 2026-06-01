@@ -1,13 +1,15 @@
 
 services:
   db:
-    image: postgres:17
+    image: postgres:16
+    
     ports:
       - 5432:5432
     environment:
       - POSTGRES_DB=postgres
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
+      - DATABASE_URL=postgres://postgres:postgres@db:5342/postgres
     volumes:
       - data:/var/lib/postgresql/data
       - ./initdb:/docker-entrypoint-initdb.d
@@ -29,5 +31,33 @@ services:
     depends_on:
       db:
         condition: service_healthy
+  client:
+    build:
+      context: ./cliente
+    command: npm run dev
+    environment:
+      VITE_API_URL: http://server:3001
+    ports:
+      - "5173:5173"
+    develop:
+      watch:
+        - action: sync
+          path: .
+          target: /app
+          initial_sync: true
+          ignore:
+            - dist/
+            - node_modules/
+        - action: sync+restart
+          path: ./vite.config.js
+          target: /app
+        - action: rebuild
+          path: ./package.json
+  backend:
+    build:
+      context: ./backend
+    command: node ./backend.ts
+    ports:
+      - "3000:3000"
 volumes:
   data:

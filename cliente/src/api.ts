@@ -1,4 +1,13 @@
 
+
+const server = import.meta.env.VITE_BACKEND_URL;
+
+
+
+
+
+console.log(server)
+
 export interface Carta {
     name: string,
     info: string,
@@ -7,7 +16,7 @@ export interface Carta {
 }
 
 export async function login(name : string, pass : string) {
-  const response = await fetch("http://localhost:3000/login", {
+  const response = await fetch(`${server}/login`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -23,7 +32,7 @@ export async function login(name : string, pass : string) {
 }
 
 export async function signup(name: string, pass: string) {
-  const response = await fetch("http://localhost:3000/signup", {
+  const response = await fetch(`${server}/signup`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -38,13 +47,16 @@ export async function signup(name: string, pass: string) {
 }
 
 export async function verifyToken(token: string){
-  const response=await fetch("http://localhost:3000/verifyUser", {
+  const response=await fetch(`${server}/verifyUser`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${token}`
     }
-  });
+  })
+  if (response.status === 498) {
+    throw new Error("Invalid Token");
+  }
 
   return await response.json();
 
@@ -52,16 +64,15 @@ export async function verifyToken(token: string){
 
 
 export async function verifyCode(code:string){
-    console.log("a")
-    const res=await fetch(`http://localhost:3000/verifyCode`,{
+
+    const res=await fetch(`${server}/verifyCode`,{
         method: "GET",
         headers: {
             "Content-Type": "application/json",
             "code":  code
         }
-    }).catch(err =>{
-        console.log(err)
-    })
+    });
+
     return (res)? true : false;
 }
 
@@ -69,7 +80,7 @@ export async function verifyCode(code:string){
 
 
 export async function updateTablero(code:string,tablero:Map<number,Carta>){
-    await fetch(`http://localhost:3000/updateMap`,{
+    await fetch(`${server}/updateMap`,{
         method: "POST",
         headers:{
             "Content-Type": "application/json",
@@ -80,7 +91,7 @@ export async function updateTablero(code:string,tablero:Map<number,Carta>){
 }
 
 export async function getTablero(code:string){
-    const res=await fetch(`http://localhost:3000/getMap`,{
+    const res=await fetch(`${server}/getMap`,{
         method: "GET",
         headers: {
             "Content-Type": "application/json",
@@ -106,7 +117,7 @@ export async function createTablero(code:string,token:string){
         mapa.set(i,{name: 'empty',info:'',directions:'',team: ''})            
     } 
 
-    await fetch(`http://localhost:3000/newMatch`,{
+    await fetch(`${server}/newMatch`,{
         method: "POST",
         headers:{
             "Content-Type":"application/json",
@@ -118,7 +129,7 @@ export async function createTablero(code:string,token:string){
 }
 
 export async function updateStats(token:string, result:string, code:string){
-    await fetch(`http://localhost:3000/updateStats`,{
+    await fetch(`${server}/updateStats`,{
         method: 'POST',
         headers:{
             "Content-Type": "application/json",
@@ -131,7 +142,7 @@ export async function updateStats(token:string, result:string, code:string){
 
 
 export async function getCarta(cartas:string[], team:string){
-    const res=await fetch(`http://localhost:3000/getCarta`,{
+    const res=await fetch(`${server}/getCarta`,{
         method: "GET",
         headers: {
             "Content-Type": "application/json",
@@ -158,7 +169,7 @@ export async function getWebSocketEvent(token:string){
 
 
 export async function determineRol(code:string, token:string){
-    const res=await fetch(`http://localhost:3000/determineRol`,{
+    const res=await fetch(`${server}/determineRol`,{
         method: "GET",
         headers:{
             "Content-Type":"application/json",
@@ -172,19 +183,19 @@ export async function determineRol(code:string, token:string){
 }
 
 export async function getStats(token:string){
-    const res=await fetch('http://localhost:3000/getStats',{
+    console.log(token)
+    const res=await fetch(`${server}/getStats`,{
         method: 'GET',
         headers:{
             "Content-Type":"application/json",
             "Authorization": `Bearer ${token}`
         }
-    })
-
+    });
     return await res.json();
 }
 
 export async function alreadyInMatch(token:string){
-    const res=await fetch('http://localhost:3000/alreadyInMatch',{
+    const res=await fetch(`${server}/alreadyInMatch`,{
         method: 'GET',
         headers:{
             "Content-Type":"application/json",

@@ -191,6 +191,22 @@ function drawTablero(mapa: Map<number,Carta>){
         const casilla=(document.getElementById(`${i}`) as HTMLDivElement);
         const info= (0<i && i<17)? mapa.get(i)?.info as string || "" : (i<1)? baraja[4+i]?.info || "": "";
         casilla.style.opacity="1.0";
+        
+        let url : string;
+
+        if (localStorage.getItem("rol")=='spectator' && i<1){
+
+            let limit=( yourTurn)? 5-Math.trunc(currentTurn/2) : 6-currentTurn/2;
+            
+            if (i<=(limit+16)){
+                url=`url(../src/assets/Cartas/unknown.png)`;
+            } else{
+                url=``;
+            }
+            casilla.style.backgroundImage=url;
+            continue;
+        }
+
 
         if (!info){
             for (let j=0; j <4; j++){
@@ -203,14 +219,20 @@ function drawTablero(mapa: Map<number,Carta>){
                 (casilla.children[j] as HTMLImageElement).setAttribute("src",`../src/assets/info/${info.charAt(j)}.png`);         
             }
         }
-        let url : string;
-
+        
         if (0<i && i<17) url=`url(../src/assets/Cartas/${mapa.get(i)?.name}${(mapa.get(i)?.team=='opp')? '_opp' : ''}.png)`; 
-        else if (i<1)   url=`url(../src/assets/Cartas/${baraja[4+i]?.name}${(baraja[4+i]?.team=='opp')? '_opp' : ''}.png)`; 
+        else if (i<1){
+            if (localStorage.getItem("rol")=='spectator'){
+                url=`url(../src/assets/Cartas/unknown.png)`;
+            } else{
+                url=`url(../src/assets/Cartas/${baraja[4+i]?.name}${(baraja[4+i]?.team=='opp')? '_opp' : ''}.png)`; 
+
+            }
+        }   
         else{
 
-            let limit;
-            limit=( yourTurn)? 5-Math.trunc(currentTurn/2) : 6-currentTurn/2;
+            let limit=( yourTurn)? 5-Math.trunc(currentTurn/2) : 6-currentTurn/2;
+            
             if (i<=(limit+16)){
                 url=`url(../src/assets/Cartas/unknown.png)`;
             } else{
