@@ -11,7 +11,7 @@ no ha comenzado partida, podra ser espectador de otra.
 ## Instrucciones de instalación
 
 #### 1- docker compose up --build -d
-#### 2- docker compose up -build
+#### 2- docker compose up --build
 
 #### vite    -> 5173
 #### backend -> 3000

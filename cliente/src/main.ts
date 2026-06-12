@@ -72,7 +72,7 @@ signUpButton.addEventListener("click", async ()=>{
 });
 
 
-createLobyButton.addEventListener("click", async (event)=>{
+createLobyButton.addEventListener("click", async ()=>{
     const alreadyInMatchCode=await alreadyInMatch(localStorage.getItem('token') as string);
 
     if (!alreadyInMatchCode.code){
@@ -85,7 +85,7 @@ createLobyButton.addEventListener("click", async (event)=>{
         window.location.replace("/partida/?code="+code)
     } else{
         (document.querySelector('body') as HTMLBodyElement).innerHTML=`<span>Lobby: ${alreadyInMatchCode.code}</span><button id='directJoin'>Join Match</button>`;
-        document.getElementById('directJoin')?.addEventListener('click', async (event)=>{
+        document.getElementById('directJoin')?.addEventListener('click', async ()=>{
             localStorage.setItem("code",alreadyInMatchCode.code);
             localStorage.setItem("rol",alreadyInMatchCode.rol);
             window.location.replace("/partida/?code="+alreadyInMatchCode.code);
@@ -120,7 +120,7 @@ joinLobyButton.addEventListener("click", async (event) =>{
             } else{
                 (document.querySelector('body') as HTMLBodyElement).innerHTML=`<span>Lobby: ${alreadyInMatchCode.code}</span><button id='directJoin'>Join Match</button>`;
                 
-                document.getElementById('directJoin')?.addEventListener('click', async (event)=>{
+                document.getElementById('directJoin')?.addEventListener('click', async ()=>{
                     localStorage.setItem("code",alreadyInMatchCode.code);
                     localStorage.setItem("rol",alreadyInMatchCode.rol);
                     window.location.replace("/partida/?code="+alreadyInMatchCode.code);

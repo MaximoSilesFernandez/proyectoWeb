@@ -446,7 +446,7 @@ async function animationTakeOver(participans:number[]){
     loser.team=winner.team;
 
     drawTablero(mapa);
-    await audioTakeOver.play().catch((err) =>{});
+    await audioTakeOver.play().catch(() =>{});
 }
 
 async function animationBattle(participans:number[],res:number[]){
@@ -464,7 +464,7 @@ async function animationBattle(participans:number[],res:number[]){
     let countdown=true;
     let intervalo=(res[0]-res[1]>res[2]-res[3])? 2000/(res[0]-res[1]) : 2000/(res[2]-res[3]);
 
-    await audioBattle.play().catch((err) =>{});
+    await audioBattle.play().catch(() =>{});
     waitaS(2).then(() => {countdown=false;});
 
     do{
@@ -479,7 +479,7 @@ async function animationBattle(participans:number[],res:number[]){
     await waitaS(1);
     document.querySelectorAll('.resultado')?.forEach(res => res.remove());
     loser.team=winner.team;
-    await audioTakeOver.play().catch((err) =>{});
+    await audioTakeOver.play().catch(() =>{});
     drawTablero(mapa);
 
 }
@@ -498,7 +498,7 @@ async function animationCombo(participans:number[],winner:number){
         carta.team=winner_team; 
     }
     drawTablero(mapa);
-    await audioTakeOver.play().catch((err) =>{});
+    await audioTakeOver.play().catch(() =>{});
     await waitaS(2);
 }
 
